@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rake-Mix Optimizer · UPRVUNL Coal Variable Charge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B1E33;
+  --navy-2:#122943;
+  --charcoal:#1B2430;
+  --paper:#EEF1F3;
+  --panel:#FFFFFF;
+  --line:#D7DCE1;
+  --steel:#5B6B7A;
+  --steel-soft:#8B98A5;
+  --gold:#C9962C;
+  --gold-soft:#F3E3BE;
+  --green:#2F7D5D;
+  --green-soft:#DCEEE5;
+  --rust:#B33F2B;
+  --rust-soft:#F5E0DA;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--charcoal);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  font-size:14px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+.num{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums;}
+h1,h2,h3{font-family:'Fraunces',serif; margin:0; letter-spacing:-0.01em;}
+
+/* ===== Top bar ===== */
+.topbar{
+  background:linear-gradient(180deg,var(--navy) 0%, var(--navy-2) 100%);
+  color:#EAF0F5;
+  padding:22px 28px 20px;
+  border-bottom:3px solid var(--gold);
+}
+.topbar-inner{max-width:1280px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.eyebrow{
+  text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:600;
+  color:var(--gold); font-family:'IBM Plex Mono',monospace;
+}
+.topbar h1{font-size:28px;font-weight:600;color:#fff;margin-top:4px;}
+.topbar .sub{color:#B9C6D2;font-size:13px;margin-top:4px;max-width:520px;}
+.target-box{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:var(--radius);
+  padding:12px 16px;
+  display:flex;align-items:center;gap:14px;
+}
+.target-box label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#B9C6D2;display:block;margin-bottom:3px;}
+.target-input-wrap{display:flex;align-items:baseline;gap:4px;}
+.target-input-wrap span{color:#B9C6D2;font-size:13px;}
+input.target-num{
+  width:82px;background:transparent;border:none;border-bottom:2px solid var(--gold);
+  color:#fff;font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;
+  padding:2px 2px;
+}
+input.target-num:focus{outline:none;border-bottom-color:#fff;}
+.btn{
+  font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:13px;
+  border:none;border-radius:8px;padding:11px 18px;cursor:pointer;
+  transition:transform .08s ease, box-shadow .12s ease;
+}
+.btn:active{transform:translateY(1px);}
+.btn-gold{background:var(--gold);color:#241800;}
+.btn-gold:hover{box-shadow:0 4px 14px rgba(201,150,44,0.45);}
+.btn-ghost{background:transparent;color:#EAF0F5;border:1px solid rgba(255,255,255,0.35);}
+.btn-ghost:hover{background:rgba(255,255,255,0.08);}
+
+/* ===== KPI strip ===== */
+.kpi-wrap{max-width:1280px;margin:-18px auto 0;padding:0 28px;position:relative;z-index:2;}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.kpi-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px 18px; box-shadow:0 6px 20px rgba(11,30,51,0.06);
+}
+.kpi-card .kpi-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--steel);font-weight:600;}
+.kpi-card .kpi-value{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;margin-top:6px;color:var(--navy);}
+.kpi-card .kpi-value small{font-size:14px;font-weight:500;color:var(--steel);}
+.kpi-card .kpi-delta{margin-top:4px;font-size:12px;font-weight:600;}
+.kpi-delta.pos{color:var(--green);}
+.kpi-delta.neg{color:var(--rust);}
+
+/* ===== Main layout ===== */
+main{max-width:1280px;margin:0 auto;padding:26px 28px 60px;}
+
+/* Plant tabs styled as wagons on a track */
+.track{
+  position:relative;
+  margin:6px 0 22px;
+  padding-top:10px;
+  border-bottom:3px dashed var(--steel-soft);
+}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;padding-bottom:14px;}
+.tab{
+  background:var(--panel); border:1.5px solid var(--line); border-radius:8px 8px 4px 4px;
+  padding:10px 14px 9px; cursor:pointer; min-width:150px;
+  position:relative; transition:border-color .12s ease, transform .1s ease;
+}
+.tab:hover{transform:translateY(-2px);}
+.tab.active{border-color:var(--navy); box-shadow:0 4px 14px rgba(11,30,51,0.15);}
+.tab .tab-name{font-weight:600;font-size:12.5px;color:var(--navy);}
+.tab .tab-type{font-size:10px;color:var(--steel);text-transform:uppercase;letter-spacing:.05em;margin-top:1px;}
+.tab .tab-vc{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;margin-top:6px;}
+.tab .wheelrow{display:flex;gap:3px;margin-top:7px;}
+.tab .wheel{width:6px;height:6px;border-radius:50%;background:var(--steel-soft);}
+.badge{
+  display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;
+  padding:2px 6px;border-radius:20px;text-transform:uppercase;margin-top:5px;
+}
+.badge.ok{background:var(--green-soft);color:var(--green);}
+.badge.bad{background:var(--rust-soft);color:var(--rust);}
+.badge.na{background:#EAEDF0;color:var(--steel);}
+
+/* Plant detail panel */
+.panel{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:24px 26px 26px; box-shadow:0 8px 28px rgba(11,30,51,0.06);
+}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:6px;}
+.panel-head h2{font-size:22px;color:var(--navy);}
+.panel-head .tag{
+  display:inline-block;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--steel);border:1px solid var(--line);border-radius:20px;padding:2px 9px;margin-left:8px;vertical-align:middle;
+}
+.panel-actions{display:flex;gap:8px;align-items:center;}
+.btn-navy{background:var(--navy);color:#fff;}
+.btn-navy:hover{box-shadow:0 4px 14px rgba(11,30,51,0.35);}
+.remark-note{
+  background:var(--gold-soft); border-left:3px solid var(--gold); border-radius:6px;
+  padding:9px 12px;font-size:12.5px;color:#5c4413;margin:12px 0 4px;white-space:pre-line;
+}
+
+/* result strip */
+.result-strip{
+  display:flex;align-items:center;gap:22px;flex-wrap:wrap;
+  margin:18px 0 22px;padding:16px 18px;border-radius:10px;background:#F6F8F9;border:1px solid var(--line);
+}
+.result-item .rlabel{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--steel);font-weight:600;}
+.result-item .rvalue{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;color:var(--navy);}
+.arrow{font-size:20px;color:var(--steel-soft);}
+.status-pill{
+  margin-left:auto;font-weight:700;font-size:12px;padding:7px 14px;border-radius:20px;letter-spacing:.02em;
+}
+.status-pill.ok{background:var(--green-soft);color:var(--green);}
+.status-pill.bad{background:var(--rust-soft);color:var(--rust);}
+.feasibility-note{width:100%;font-size:12px;color:var(--steel);margin-top:6px;}
+
+/* Wagon visualization */
+.wagons-block{margin:6px 0 22px;}
+.wagons-row{margin-bottom:14px;}
+.wagons-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--steel);font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;}
+.train{display:flex;height:34px;border-radius:6px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line);}
+.wagon{
+  display:flex;align-items:center;justify-content:center;color:#fff;font-family:'IBM Plex Mono',monospace;
+  font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;position:relative;
+  border-right:2px solid rgba(0,0,0,0.15);
+  transition:width .3s ease;
+}
+.rails{height:4px;background:repeating-linear-gradient(90deg,var(--steel-soft) 0 8px, transparent 8px 14px);margin-top:2px;border-radius:2px;}
+
+/* Source table */
+.tbl-wrap{overflow-x:auto;margin-top:4px;border:1px solid var(--line);border-radius:10px;}
+table.src{border-collapse:collapse;width:100%;min-width:980px;}
+table.src th{
+  background:var(--navy);color:#DCE4EA;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+  font-weight:600;text-align:right;padding:10px 10px;white-space:nowrap;
+}
+table.src th:first-child, table.src td:first-child{text-align:left;position:sticky;left:0;}
+table.src th:first-child{background:var(--navy);}
+table.src td{padding:8px 10px;text-align:right;border-top:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:#fff;}
+table.src td:first-child{font-family:'IBM Plex Sans',sans-serif;font-weight:600;color:var(--navy);}
+table.src td.readonly{color:var(--steel);}
+table.src tr:hover td{background:#F7F9FA;}
+.chip{
+  display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle;
+}
+.cell-input{
+  width:64px;text-align:right;border:1px solid var(--line);border-radius:5px;padding:4px 6px;
+  font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:#fff;color:var(--charcoal);
+}
+.cell-input:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--gold);}
+.cell-input.range{width:52px;}
+.vc-cell{font-weight:700;}
+.vc-under{color:var(--green);}
+.vc-over{color:var(--rust);}
+
+.flex-controls{display:flex;align-items:center;gap:10px;margin:16px 0 8px;font-size:12.5px;color:var(--steel);}
+.flex-controls input[type=range]{width:140px;accent-color:var(--gold);}
+.flex-controls .fb-val{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--navy);}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--steel);}
+.legend span.chip{display:inline-block;}
+
+footer{max-width:1280px;margin:0 auto;padding:6px 28px 50px;color:var(--steel);font-size:11.5px;line-height:1.6;}
+footer h4{font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--navy);margin-bottom:6px;}
+footer .cols{display:grid;grid-template-columns:1.3fr 1fr;gap:30px;border-top:1px solid var(--line);padding-top:18px;}
+code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Plex Mono',monospace;}
+
+@media (max-width:820px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr);}
+  footer .cols{grid-template-columns:1fr;}
+  table.src{min-width:880px;}
+}
+
+.topbar-logo{width:96px;height:96px;object-fit:contain;flex-shrink:0;}
+
+/* ---------- Phone responsiveness ---------- */
+@media (max-width:600px){
+  .topbar{padding:16px 16px 14px;}
+  .topbar-inner{flex-direction:column;align-items:stretch;gap:14px;}
+  .topbar-brand{width:100%;align-items:flex-start;}
+  .topbar-logo{width:60px;height:60px;}
+  .topbar h1{font-size:20px;line-height:1.25;}
+  .topbar .sub{font-size:12px;max-width:100%;}
+  .topbar-controls{width:100%;flex-direction:column;align-items:stretch;gap:10px;}
+  .target-box{width:100%;box-sizing:border-box;}
+  #optimizeAllBtn, #resetAllBtn, #serverOptimizeBtn{width:100%;text-align:center;box-sizing:border-box;}
+
+  .wrap, main, footer{padding-left:14px;padding-right:14px;}
+  .kpi-wrap{padding-left:14px;padding-right:14px;}
+  .kpi-strip{grid-template-columns:1fr 1fr;gap:10px;}
+  .kpi-card{padding:12px 14px;}
+  .kpi-card .kpi-value{font-size:20px;}
+
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:6px;}
+  .tab{min-width:160px;flex:0 0 auto;}
+
+  .panel{padding:16px;}
+  .panel-head{flex-direction:column;align-items:flex-start;gap:10px;}
+  .panel-head h2{font-size:18px;}
+  .panel-actions{width:100%;flex-wrap:wrap;}
+
+  .result-strip{gap:12px;padding:12px 14px;}
+  .result-strip .rvalue, .result-strip .kpi-value{font-size:17px;}
+
+  .field-grid{grid-template-columns:1fr 1fr;}
+
+  table.src{min-width:720px;font-size:11.5px;}
+  .tbl-wrap{-webkit-overflow-scrolling:touch;}
+
+  footer .cols{grid-template-columns:1fr;gap:18px;}
+}
+
+@media (max-width:400px){
+  .kpi-strip{grid-template-columns:1fr;}
+  .field-grid{grid-template-columns:1fr;}
+  table.src{min-width:600px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-brand" style="display:flex;align-items:center;gap:16px;">
+      <img src="data:image/png;base64,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" alt="UPRVUNL logo" class="topbar-logo">
+      <div>
+        <div class="eyebrow">UPRVUNL &middot; Coal Liaisoning &amp; Supervision</div>
+        <h1>Rake-Mix Variable Charge Optimizer</h1>
+        <div class="sub">Reallocates monthly coal rakes across linkage &amp; bridge-linkage sources to pull every plant's blended variable charge down to the target ceiling.</div>
+      </div>
+    </div>
+    <div class="topbar-controls" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <div class="target-box">
+        <div>
+          <label>Target ceiling</label>
+          <div class="target-input-wrap"><span>&#8377;</span><input type="number" step="0.01" id="globalTarget" class="target-num" value="4.00"><span>/unit</span></div>
+        </div>
+      </div>
+      <button class="btn btn-gold" id="optimizeAllBtn">Optimize all plants</button>
+      <button class="btn btn-ghost" id="resetAllBtn">Reset to source data</button>
+      <button class="btn btn-gold" id="serverOptimizeBtn" type="button" title="Solves with Google OR-Tools on the FastAPI backend">Optimize Allocation (OR-Tools)</button>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-wrap">
+  <div class="kpi-strip" id="kpiStrip"></div>
+</div>
+
+<div class="kpi-wrap" id="serverOptimizeWrap" style="display:none;">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2 id="serverOptStatusHeading">Server Optimization Result</h2>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-ghost" id="serverOptimizeCloseBtn">Close</button>
+      </div>
+    </div>
+    <div id="serverOptimizeBody"></div>
+  </div>
+</div>
+
+<main>
+  <div class="track">
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div id="plantPanel"></div>
+</main>
+
+<footer>
+  <div class="cols">
+    <div>
+      <h4>Method</h4>
+      Each coal source's landed cost is modelled as <code class="f">Landed = Rate + Freight (Rs/MT)</code>, consistent with the source workbook (the quoted Premium% is contractual context on bridge-linkage rates and isn't separately added). Variable charge is <code class="f">VC = Landed &times; SCC &divide; (1 &minus; APC%) &divide; 1000</code>. For each plant, the optimizer is a bounded fractional (water-filling) allocation: it fills the cheapest source first, up to its Max % cap, then the next cheapest, until 100% of the rake volume is placed &mdash; the exact optimum for a linear blend under Min/Max share constraints. This is a planning aid built from the uploaded worksheet; it does not reflect real-time rake booking, FSA trigger-level obligations, or CIL allocation decisions, and every input cell remains editable.
+    </div>
+    <div>
+      <h4>Reading the panel</h4>
+      <b>Current split</b> uses each plant's July-2026 rake receipts (falling back to the MSQ rake share where receipts aren't recorded). <b>Min/Max %</b> default to the current split &plusmn; the flex band below the source table &mdash; widen a source's Max to let the optimizer lean on it harder, or raise its Min to protect a contractual floor. A plant with no feasible mix under its current caps shows the shortfall and the cheapest source to unlock.
+    </div>
+  </div>
+</footer>
+
+<script>
+const RAW_DATA = [
+  {
+    "name": "Harduaganj (110 MW)",
+    "linkageType": "Linkage",
+    "vcMoD": 5.12,
+    "currentVC": null,
+    "remark": "Vintage Unit , UPPCL operates on peak demands only. Billing can be done in such a way that BCCL coal may be booked on 110 MW unit.",
+    "sources": [
+      {
+        "name": "BCCL",
+        "annualLinkage": 2.82,
+        "rate": 4497,
+        "premium": 0,
+        "freight": 2194,
+        "scc": 0.93,
+        "apc": 9.5,
+        "msqRakes": 0.19810326659641725,
+        "julyReceipt": null
+      },
+      {
+        "name": "CCL",
+        "annualLinkage": 21.69,
+        "rate": 2349,
+        "premium": 0,
+        "freight": 2202,
+        "scc": 1,
+        "apc": 9.5,
+        "msqRakes": 1.523709167544784,
+        "julyReceipt": null
+      }
+    ]
+  },
+  {
+    "name": "Harduaganj (2X250 MW)",
+    "linkageType": "Linkage",
+    "vcMoD": 3.99,
+    "currentVC": 3.99,
+    "remark": null,
+    "sources": [
+      {
+        "name": "BCCL",
+        "annualLinkage": 2.82,
+        "rate": 4497,
+        "premium": 0,
+        "freight": 2194,
+        "scc": 0.65,
+        "apc": 9,
+        "msqRakes": 0.19810326659641725,
+        "julyReceipt": 20
+      },
+      {
+        "name": "CCL",
+        "annualLinkage": 21.69,
+        "rate": 2349,
+        "premium": 0,
+        "freight": 2202,
+        "scc": 0.78,
+        "apc": 9,
+        "msqRakes": 1.523709167544784,
+        "julyReceipt": 30
+      }
+    ]
+  },
+  {
+    "name": "Harduaganj (1X660 MW)",
+    "linkageType": "Bridge Linkage",
+    "vcMoD": 3.81,
+    "currentVC": 3.81,
+    "remark": null,
+    "sources": [
+      {
+        "name": "CCL",
+        "annualLinkage": 12.33,
+        "rate": 2700,
+        "premium": 10,
+        "freight": 2202,
+        "scc": 0.7,
+        "apc": 7.65,
+        "msqRakes": 0.8661749209694415,
+        "julyReceipt": 30
+      },
+      {
+        "name": "SECL",
+        "annualLinkage": 13.59,
+        "rate": 3500,
+        "premium": 10,
+        "freight": 2089.5,
+        "scc": 0.654,
+        "apc": 7.65,
+        "msqRakes": 0.9546891464699684,
+        "julyReceipt": 15
+      },
+      {
+        "name": "NCL",
+        "annualLinkage": null,
+        "rate": 3100,
+        "premium": 0,
+        "freight": 1686.3000000000002,
+        "scc": 0.654,
+        "apc": 7.65,
+        "msqRakes": 0,
+        "julyReceipt": 0
+      },
+      {
+        "name": "BCCL",
+        "annualLinkage": null,
+        "rate": 4800,
+        "premium": 0,
+        "freight": 2194,
+        "scc": 0.62,
+        "apc": 7.65,
+        "msqRakes": 0,
+        "julyReceipt": 10
+      }
+    ]
+  },
+  {
+    "name": "Parichha",
+    "linkageType": "Linkage",
+    "vcMoD": 3.81,
+    "currentVC": 3.86,
+    "remark": null,
+    "sources": [
+      {
+        "name": "NCL",
+        "annualLinkage": 32.47,
+        "rate": 3100,
+        "premium": 0,
+        "freight": 1613,
+        "scc": 0.759,
+        "apc": 9,
+        "msqRakes": 2.280997541271514,
+        "julyReceipt": 50
+      },
+      {
+        "name": "CCL",
+        "annualLinkage": 8.08,
+        "rate": 2349,
+        "premium": 0,
+        "freight": 1959,
+        "scc": 0.759,
+        "apc": 9,
+        "msqRakes": 0.5676150333684581,
+        "julyReceipt": 21
+      },
+      {
+        "name": "BCCL",
+        "annualLinkage": null,
+        "rate": 4500,
+        "premium": 0,
+        "freight": 1985.5500000000002,
+        "scc": 0.7,
+        "apc": 9,
+        "msqRakes": 0,
+        "julyReceipt": 10
+      }
+    ]
+  },
+  {
+    "name": "Panki",
+    "linkageType": "Bridge Linkage",
+    "vcMoD": 3.31,
+    "currentVC": 3.31,
+    "remark": null,
+    "sources": [
+      {
+        "name": "CCL",
+        "annualLinkage": 24.66,
+        "rate": 2650,
+        "premium": 10,
+        "freight": 2007,
+        "scc": 0.67,
+        "apc": 5.75,
+        "msqRakes": 1.732349841938883,
+        "julyReceipt": 33
+      },
+      {
+        "name": "BCCL",
+        "annualLinkage": null,
+        "rate": 4861,
+        "premium": 10,
+        "freight": 1665,
+        "scc": 0.625,
+        "apc": 5.75,
+        "msqRakes": 0,
+        "julyReceipt": 30
+      },
+      {
+        "name": "SECL",
+        "annualLinkage": null,
+        "rate": 3722,
+        "premium": 10,
+        "freight": 1558.2,
+        "scc": 0.625,
+        "apc": 5.75,
+        "msqRakes": 0,
+        "julyReceipt": 0
+      },
+      {
+        "name": "NCL",
+        "annualLinkage": null,
+        "rate": 3100,
+        "premium": 0,
+        "freight": 1129,
+        "scc": 0.625,
+        "apc": 5.75,
+        "msqRakes": 0,
+        "julyReceipt": 0
+      }
+    ]
+  },
+  {
+    "name": "Jawaharpur*",
+    "linkageType": "Bridge Linkage",
+    "vcMoD": 4.19,
+    "currentVC": 4.09,
+    "remark": "Till 09.07.2026,\nTotal rakes diverted = 11 rakes   ( 9 rakes of BCCL from Jawaharpur to other plant 3-Hdj, 6-Panki). 2 CCL  rakes of Panki  diverted to jawaharpur TPS.",
+    "sources": [
+      {
+        "name": "CCL",
+        "annualLinkage": 0,
+        "rate": 3000,
+        "premium": 10,
+        "freight": 2342,
+        "scc": 0.65,
+        "apc": 5.75,
+        "msqRakes": 0,
+        "julyReceipt": 20
+      },
+      {
+        "name": "BCCL",
+        "annualLinkage": 10.03,
+        "rate": 4861,
+        "premium": 10,
+        "freight": 2215,
+        "scc": 0.625,
+        "apc": 5.75,
+        "msqRakes": 0.704601334738321,
+        "julyReceipt": 20
+      },
+      {
+        "name": "SECL",
+        "annualLinkage": 27.17,
+        "rate": 3722,
+        "premium": 10,
+        "freight": 2305,
+        "scc": 0.625,
+        "apc": 5.75,
+        "msqRakes": 1.9086757990867582,
+        "julyReceipt": 60
+      },
+      {
+        "name": "NCL",
+        "annualLinkage": null,
+        "rate": 3100,
+        "premium": 0,
+        "freight": 1708,
+        "scc": 0.625,
+        "apc": 5.75,
+        "msqRakes": 0,
+        "julyReceipt": 10
+      },
+      {
+        "name": "ECL",
+        "annualLinkage": 11.05,
+        "rate": 5000,
+        "premium": 0,
+        "freight": 2215,
+        "scc": 0.625,
+        "apc": 5.75,
+        "msqRakes": 0.7762557077625571,
+        "julyReceipt": null
+      }
+    ]
+  }
+];
+
+// ---------- domain helpers ----------
+function landedCost(s){ return s.rate + s.freight; }
+function unitVC(s){ return landedCost(s) * s.scc / (1 - s.apc/100) / 1000; }
+
+const SOURCE_COLORS = {
+  'BCCL':'#0B1E33','CCL':'#C9962C','SECL':'#2F7D5D','NCL':'#B33F2B',
+  'ECL':'#5B6B7A','__default':'#7A6A8C'
+};
+function colorFor(name){ return SOURCE_COLORS[name] || SOURCE_COLORS.__default; }
+
+// ---------- Current VC / Current Rakes persistence (browser localStorage) ----------
+// Current VC is a manually-entered, monthly-changing input (see task spec) -
+// there is no backend database in this project, so edits are saved per
+// plant+source in the browser and restored on reload. "Reset to source
+// data" clears these overrides and falls back to the formula/receipt-based
+// defaults below.
+const LS_KEY = 'coalOptimizerOverrides.v1';
+function loadOverrides(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }catch(e){ return {}; }
+}
+function saveOverride(plantName, sourceName, field, value){
+  const all = loadOverrides();
+  const key = plantName + '||' + sourceName;
+  all[key] = all[key] || {};
+  all[key][field] = value;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(all)); }catch(e){}
+}
+function clearOverrides(){
+  try{ localStorage.removeItem(LS_KEY); }catch(e){}
+}
+
+// ---------- build working state ----------
+function buildState(){
+  const overrides = loadOverrides();
+  return RAW_DATA.map(p=>{
+    const raw = p.sources.map(s=>({...s}));
+    const receiptSum = raw.reduce((a,s)=>a + (s.julyReceipt||0), 0);
+    const msqSum = raw.reduce((a,s)=>a + (s.msqRakes||0), 0);
+    let basis = 'equal';
+    if(receiptSum > 0) basis = 'receipt';
+    else if(msqSum > 0) basis = 'msq';
+
+    const n = raw.length;
+    const sources = raw.map(s=>{
+      let defaultRakes;
+      if(basis==='receipt') defaultRakes = s.julyReceipt||0;
+      else if(basis==='msq') defaultRakes = s.msqRakes||0;
+      else defaultRakes = 1;
+      const ov = overrides[p.name + '||' + s.name] || {};
+      const currentRakes = ov.currentRakes!==undefined ? ov.currentRakes : (Math.round(defaultRakes*10)/10);
+      // Current VC is the manually-entered, authoritative cost figure used by
+      // the optimizer. It defaults to the Rate/Freight/SCC/APC formula value
+      // as a sensible starting point, but is fully editable and independent
+      // of that formula from then on (per task spec's 3-way VC distinction).
+      const currentVC = ov.currentVC!==undefined ? ov.currentVC : (Math.round(unitVC(s)*100)/100);
+      return {
+        ...s,
+        rate:s.rate, freight:s.freight, scc:s.scc, apc:s.apc,
+        currentRakes, currentVC,
+        currentShare: 0, // recomputed by recomputeAllShares()
+        minShare: 0, maxShare: 100 // recomputed by applyFlexBand
+      };
+    });
+    return {
+      name:p.name, linkageType:p.linkageType, vcMoD:p.vcMoD, currentVC:p.currentVC, remark:p.remark,
+      basis, totalRakes: 0, // recomputed by recomputeAllShares()
+      flexBand: 20,
+      sources,
+      lastOptimized:null
+    };
+  });
+}
+
+let state = buildState();
+let activeIdx = 0;
+let globalTarget = 4.00;
+
+// Keeps totalRakes / currentShare in sync with the editable currentRakes per
+// source. Called at the top of render() so every downstream calculation
+// (flex band, optimizer bounds, KPIs, the /optimize payload) sees fresh
+// values immediately after any edit - no page reload needed.
+function recomputeAllShares(){
+  state.forEach(p=>{
+    const total = p.sources.reduce((a,s)=>a+(s.currentRakes||0), 0);
+    p.totalRakes = total;
+    p.sources.forEach(s=>{ s.currentShare = total>0 ? s.currentRakes/total : 0; });
+  });
+}
+recomputeAllShares();
+
+function applyFlexBand(plant){
+  const fb = plant.flexBand;
+  plant.sources.forEach(s=>{
+    const pct = s.currentShare*100;
+    s.minShare = Math.max(0, Math.round(pct - fb));
+    s.maxShare = Math.min(100, Math.round(pct + fb));
+    if(s.maxShare < s.minShare) s.maxShare = s.minShare;
+  });
+}
+state.forEach(applyFlexBand);
+
+// ---------- optimizer: bounded water-filling ----------
+// Cost coefficient is the manually-entered Current VC (s.currentVC), never
+// the Rate/Freight/SCC/APC formula - the optimizer changes only the rake
+// allocation and never touches source-level VC values.
+function optimizePlant(plant){
+  const srcs = plant.sources.map(s=>({name:s.name, vc:s.currentVC, min:s.minShare/100, max:s.maxShare/100}));
+  const sumMin = srcs.reduce((a,s)=>a+s.min,0);
+  const sumMax = srcs.reduce((a,s)=>a+s.max,0);
+  if(sumMin > 1.0001) return {infeasible:true, reason:`Minimum shares sum to ${(sumMin*100).toFixed(0)}%, above 100%. Lower a Min %.`};
+  if(sumMax < 0.9999) return {infeasible:true, reason:`Maximum shares sum to only ${(sumMax*100).toFixed(0)}%, below 100%. Raise a Max %.`};
+
+  const alloc = {};
+  srcs.forEach(s=>alloc[s.name]=s.min);
+  let remaining = 1 - sumMin;
+  const order = [...srcs].sort((a,b)=>a.vc-b.vc);
+  for(const s of order){
+    if(remaining <= 1e-9) break;
+    const room = s.max - s.min;
+    const take = Math.min(room, remaining);
+    if(take>0){ alloc[s.name]+=take; remaining-=take; }
+  }
+  const blendedVC = srcs.reduce((a,s)=>a + alloc[s.name]*s.vc, 0);
+  const cheapest = order[0];
+  return {infeasible:false, alloc, blendedVC, cheapestName:cheapest.name, cheapestVC:cheapest.vc};
+}
+
+// Plant Current VC = Σ(Current Rakes × Source Current VC) ÷ Σ(Current Rakes).
+// Read-only / derived - returns null if the plant currently has 0 total
+// rakes (division-by-zero guard, per spec).
+function currentBlendedVC(plant){
+  const total = plant.sources.reduce((a,s)=>a+(s.currentRakes||0), 0);
+  if(total<=0) return null;
+  return plant.sources.reduce((a,s)=>a + (s.currentRakes||0)*s.currentVC, 0) / total;
+}
+
+// Apply an optimizer result to a plant: the optimized split becomes the
+// new "current" rakes, so the change is actually visible (train bars move,
+// VC numbers update, KPI strip reflects it) instead of the button being
+// a no-op re-render of already-live-computed numbers. Source-level Current
+// VC is never modified - only currentRakes changes.
+function applyOptimizedToPlant(plant){
+  const r = optimizePlant(plant);
+  if(r.infeasible) return false;
+  const total = plant.sources.reduce((a,s)=>a+(s.currentRakes||0), 0);
+  plant.sources.forEach(s=>{ s.currentRakes = Math.round(r.alloc[s.name]*total*10)/10; });
+  return true;
+}
+
+function flashButton(id, successText, failText, ok){
+  const btn = document.getElementById(id);
+  if(!btn) return;
+  const original = btn.textContent;
+  btn.textContent = ok ? successText : failText;
+  btn.disabled = true;
+  setTimeout(()=>{
+    const el = document.getElementById(id);
+    if(el){ el.textContent = original; el.disabled = false; }
+  }, 1300);
+}
+
+// ---------- formatting ----------
+const fmt2 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(2);
+const fmt1 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(1);
+const fmt0 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : Math.round(n);
+
+// ---------- render ----------
+function render(){
+  recomputeAllShares();
+  renderKPI();
+  renderTabs();
+  renderPanel();
+}
+
+function renderKPI(){
+  const results = state.map(p=>optimizePlant(p));
+  let wSumCur=0, wSumOpt=0, wTot=0, metBefore=0, metAfter=0, rakesShifted=0;
+  state.forEach((p,i)=>{
+    const cur = currentBlendedVC(p);
+    const r = results[i];
+    const opt = r.infeasible ? cur : r.blendedVC;
+    wSumCur += (cur||0)*p.totalRakes;
+    wSumOpt += (opt||0)*p.totalRakes;
+    wTot += p.totalRakes;
+    if(cur!==null && cur<=globalTarget) metBefore++;
+    if(!r.infeasible && r.blendedVC <= globalTarget) metAfter++;
+    if(!r.infeasible){
+      p.sources.forEach(s=>{
+        const before = s.currentShare*100;
+        const after = r.alloc[s.name]*100;
+        rakesShifted += Math.abs(after-before)/100*p.totalRakes;
+      });
+    }
+  });
+  const avgCur = wTot? wSumCur/wTot : 0;
+  const avgOpt = wTot? wSumOpt/wTot : 0;
+  const delta = avgOpt-avgCur;
+
+  document.getElementById('kpiStrip').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Portfolio avg VC &middot; current mix</div>
+      <div class="kpi-value">&#8377;${fmt2(avgCur)}<small>/unit</small></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Portfolio avg VC &middot; optimized</div>
+      <div class="kpi-value">&#8377;${fmt2(avgOpt)}<small>/unit</small></div>
+      <div class="kpi-delta ${delta<=0?'pos':'neg'}">${delta<=0?'&#9660;':'&#9650;'} ${fmt2(Math.abs(delta))} vs current</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Plants at or under target</div>
+      <div class="kpi-value">${metAfter}<small>/${state.length}</small></div>
+      <div class="kpi-delta ${metAfter>=metBefore?'pos':'neg'}">was ${metBefore}/${state.length} before</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Rake volume reallocated / mo</div>
+      <div class="kpi-value">${fmt1(rakesShifted)}<small>rakes</small></div>
+    </div>
+  `;
+}
+
+function renderTabs(){
+  const results = state.map(p=>optimizePlant(p));
+  document.getElementById('tabs').innerHTML = state.map((p,i)=>{
+    const r = results[i];
+    const curVC = currentBlendedVC(p);
+    const ok = curVC!==null ? curVC<=globalTarget : null;
+    const badge = ok===null ? `<span class="badge na">no current data</span>` : (ok?`<span class="badge ok">at target</span>`:`<span class="badge bad">above target</span>`);
+    const wheels = p.sources.map(s=>`<span class="wheel" style="background:${colorFor(s.name)}"></span>`).join('');
+    return `<div class="tab ${i===activeIdx?'active':''}" data-idx="${i}">
+      <div class="tab-name">${p.name}</div>
+      <div class="tab-type">${p.linkageType||''}</div>
+      <div class="tab-vc">${curVC!==null?('&#8377;'+fmt2(curVC)):'&mdash;'}</div>
+      ${badge}
+      <div class="wheelrow">${wheels}</div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.tab').forEach(el=>{
+    el.addEventListener('click', ()=>{ activeIdx = parseInt(el.dataset.idx); render(); });
+  });
+}
+
+function renderPanel(){
+  const plant = state[activeIdx];
+  const r = optimizePlant(plant);
+  const cur = currentBlendedVC(plant);
+  const opt = r.infeasible ? null : r.blendedVC;
+  const baseline = (plant.currentVC!==null && plant.currentVC!==undefined) ? plant.currentVC : plant.vcMoD;
+
+  const rows = plant.sources.map(s=>{
+    const formulaVC = unitVC(s);
+    const landed = landedCost(s);
+    const optShare = r.infeasible ? null : (r.alloc[s.name]*100);
+    const curVcClass = s.currentVC<=globalTarget ? 'vc-under' : 'vc-over';
+    return `<tr data-src="${s.name}">
+      <td><span class="chip" style="background:${colorFor(s.name)}"></span>${s.name}</td>
+      <td class="readonly">${s.annualLinkage!==null?s.annualLinkage:'&mdash;'}</td>
+      <td><input class="cell-input" type="number" step="1" data-field="rate" value="${s.rate}"></td>
+      <td class="readonly">${s.premium}%</td>
+      <td><input class="cell-input" type="number" step="1" data-field="freight" value="${s.freight}"></td>
+      <td class="readonly">${fmt0(landed)}</td>
+      <td><input class="cell-input" type="number" step="0.01" data-field="scc" value="${s.scc}"></td>
+      <td><input class="cell-input" type="number" step="0.1" data-field="apc" value="${s.apc}"></td>
+      <td class="readonly" title="Computed from Rate/Freight/SCC/APC - a reference starting point only, not used by the optimizer">${fmt2(formulaVC)}</td>
+      <td class="vc-cell ${curVcClass}"><input class="cell-input" type="number" step="0.01" min="0.01" data-field="currentVC" value="${s.currentVC}"></td>
+      <td title="${fmt1(s.currentShare*100)}% of plant total"><input class="cell-input" type="number" step="1" min="0" data-field="currentRakes" value="${s.currentRakes}"></td>
+      <td><input class="cell-input range" type="number" step="1" min="0" max="100" data-field="minShare" value="${s.minShare}">%</td>
+      <td><input class="cell-input range" type="number" step="1" min="0" max="100" data-field="maxShare" value="${s.maxShare}">%</td>
+      <td class="readonly" style="font-weight:700;color:var(--navy)">${optShare===null?'&mdash;':fmt1(optShare)+'%'}</td>
+    </tr>`;
+  }).join('');
+
+  const trainCurrent = renderTrain(plant.sources.map(s=>({name:s.name, share:s.currentShare*100})));
+  const trainOptimized = r.infeasible ? `<div style="font-size:12px;color:var(--steel);padding:8px 0;">No feasible mix under current Min/Max caps &mdash; widen a Max % to see the optimized train.</div>`
+    : renderTrain(plant.sources.map(s=>({name:s.name, share:r.alloc[s.name]*100})));
+
+  document.getElementById('plantPanel').innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>${plant.name}<span class="tag">${plant.linkageType||''}</span></h2>
+          ${baseline!==null&&baseline!==undefined?`<div style="font-size:11px;color:var(--steel);margin-top:3px;">Excel-reported baseline VC: &#8377;${fmt2(baseline)}</div>`:''}
+        </div>
+        <div class="panel-actions">
+          <label style="font-size:11px;color:var(--steel);display:flex;align-items:center;gap:6px;">
+            Total current rakes
+            <input class="cell-input" style="width:56px" type="number" step="0.1" id="totalRakesInput" value="${plant.totalRakes}" readonly title="Computed automatically as the sum of each source's Current Rakes">
+          </label>
+          <button class="btn btn-navy" id="optimizeOneBtn">Optimize this plant</button>
+        </div>
+      </div>
+      ${plant.remark ? `<div class="remark-note">${plant.remark}</div>` : ''}
+
+      <div class="result-strip">
+        <div class="result-item">
+          <div class="rlabel">Current VC (computed)</div>
+          <div class="rvalue">${cur!==null?('&#8377;'+fmt2(cur)):'&mdash;'}</div>
+        </div>
+        <div class="arrow">&#8594;</div>
+        <div class="result-item">
+          <div class="rlabel">Optimized VC (model)</div>
+          <div class="rvalue" style="color:${r.infeasible?'var(--rust)':'var(--green)'}">${r.infeasible?'infeasible':('&#8377;'+fmt2(opt))}</div>
+        </div>
+        <div class="result-item">
+          <div class="rlabel">Target ceiling</div>
+          <div class="rvalue" style="color:var(--steel);font-size:20px">&#8377;${fmt2(globalTarget)}</div>
+        </div>
+        ${r.infeasible
+          ? `<div class="status-pill bad">Not achievable</div><div class="feasibility-note">${r.reason} Cheapest available source is <b>${r.cheapestName||''}</b>.</div>`
+          : `<div class="status-pill ${opt<=globalTarget?'ok':'bad'}">${opt<=globalTarget?'Target reachable':'Above target even at floor'}</div>${opt>globalTarget?`<div class="feasibility-note">Cheapest source within current caps is <b>${r.cheapestName}</b> at &#8377;${fmt2(r.cheapestVC)}/unit &mdash; raise its Max % to push the blend lower.</div>`:''}`
+        }
+      </div>
+
+      <div class="wagons-block">
+        <div class="wagons-row">
+          <div class="wagons-label"><span>Current rake split &middot; ${plant.basis==='receipt'?'July 2026 receipts':(plant.basis==='msq'?'MSQ share (no July receipts recorded)':'even split &ndash; no data')}</span><span>${fmt2(cur)} &#8377;/unit (model)</span></div>
+          <div class="train">${trainCurrent}</div>
+          <div class="rails"></div>
+        </div>
+        <div class="wagons-row">
+          <div class="wagons-label"><span>Optimized rake split</span><span>${r.infeasible?'&mdash;':fmt2(opt)+' &#8377;/unit'}</span></div>
+          <div class="train">${trainOptimized}</div>
+          <div class="rails"></div>
+        </div>
+        <div class="legend">${plant.sources.map(s=>`<span><span class="chip" style="background:${colorFor(s.name)}"></span>${s.name} &middot; &#8377;${fmt2(s.currentVC)}/unit</span>`).join('')}</div>
+      </div>
+
+      <div class="flex-controls">
+        Auto Min/Max flex band around current split:
+        <input type="range" min="0" max="50" step="5" id="flexBand" value="${plant.flexBand}">
+        <span class="fb-val" id="flexBandVal">&plusmn;${plant.flexBand} pp</span>
+        <span style="color:var(--steel-soft)">&mdash; recomputing overwrites manual Min/Max edits below</span>
+      </div>
+
+      <div class="tbl-wrap">
+        <table class="src">
+          <thead><tr>
+            <th>Source</th><th>Annual linkage<br>(Lac MT)</th><th>Rate<br>(Rs/MT)</th><th>Premium</th><th>Freight<br>(Rs/MT)</th>
+            <th>Landed<br>(Rs/MT)</th><th>SCC<br>(kg/kWh)</th><th>APC %</th><th>Formula VC<br>(ref., Rs/unit)</th>
+            <th>Current VC<br>(Rs/unit)</th><th>Current<br>Rakes</th><th>Min %</th><th>Max %</th><th>Optimized<br>split</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // wire events
+  document.getElementById('optimizeOneBtn').addEventListener('click', ()=>{
+    const ok = applyOptimizedToPlant(plant);
+    render();
+    flashButton('optimizeOneBtn', 'Applied \u2713', 'Infeasible \u2014 widen Max %', ok);
+  });
+  // totalRakesInput is read-only (derived as the sum of Current Rakes below) - no listener needed.
+  document.getElementById('flexBand').addEventListener('input', e=>{
+    plant.flexBand = parseFloat(e.target.value);
+    document.getElementById('flexBandVal').textContent = `\u00b1${plant.flexBand} pp`;
+    applyFlexBand(plant);
+    render();
+  });
+  document.querySelectorAll('table.src input[data-field]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const tr = e.target.closest('tr');
+      const srcName = tr.dataset.src;
+      const field = e.target.dataset.field;
+      const src = plant.sources.find(s=>s.name===srcName);
+      const val = parseFloat(e.target.value);
+      src[field] = val;
+      // Current VC / Current Rakes are the manually-entered monthly inputs -
+      // persist immediately so they survive a page reload (see LS_KEY above).
+      if(field==='currentVC' || field==='currentRakes'){
+        saveOverride(plant.name, srcName, field, val);
+      }
+      render();
+    });
+  });
+}
+
+function renderTrain(items){
+  return items.map(it=>{
+    const w = Math.max(it.share, 0);
+    if(w<=0.05) return '';
+    return `<div class="wagon" style="width:${w}%;background:${colorFor(it.name)}" title="${it.name}: ${it.share.toFixed(1)}%">${w>7?it.name+' '+it.share.toFixed(0)+'%':''}</div>`;
+  }).join('');
+}
+
+// ---------- global controls ----------
+document.getElementById('globalTarget').addEventListener('input', e=>{
+  globalTarget = parseFloat(e.target.value)||0;
+  render();
+});
+document.getElementById('optimizeAllBtn').addEventListener('click', ()=>{
+  let anyApplied = false;
+  state.forEach(p=>{ if(applyOptimizedToPlant(p)) anyApplied = true; });
+  render();
+  flashButton('optimizeAllBtn', 'Applied to all \u2713', 'No feasible plants', anyApplied);
+});
+document.getElementById('resetAllBtn').addEventListener('click', ()=>{
+  clearOverrides(); // discard manually-entered Current VC / Current Rakes too
+  state = buildState();
+  state.forEach(applyFlexBand);
+  activeIdx = 0;
+  document.getElementById('globalTarget').value = '4.00';
+  globalTarget = 4.00;
+  render();
+});
+
+// =====================================================================
+// Server-side OR-Tools optimization (FastAPI backend at /optimize)
+// This is entirely additive: it does not touch any existing state,
+// calculation, or the client-side heuristic optimizer above. It only
+// reads the current plant/source data, POSTs it to the backend, and
+// renders the returned result in its own panel.
+// =====================================================================
+const OPTIMIZER_API_BASE = window.OPTIMIZER_API_BASE || 'http://localhost:8000';
+
+function buildOptimizePayload(){
+  return {
+    plants: state.map(p => ({
+      plant: p.name,
+      sources: p.sources.map(s => ({
+        company: s.name,
+        current_rakes: Math.round((s.currentRakes||0) * 10) / 10,
+        current_vc: Math.round(s.currentVC * 100000) / 100000,
+        minRakes: Math.round((s.minShare/100) * p.totalRakes * 10) / 10,
+        maxRakes: Math.round((s.maxShare/100) * p.totalRakes * 10) / 10,
+      }))
+    }))
+  };
+}
+
+function renderServerOptimizeResult(result){
+  const wrap = document.getElementById('serverOptimizeWrap');
+  const body = document.getElementById('serverOptimizeBody');
+  const heading = document.getElementById('serverOptStatusHeading');
+  wrap.style.display = 'block';
+
+  if(result.status === 'validation_error'){
+    heading.innerHTML = `Server Optimization Result <span class="badge bad">Validation error</span>`;
+    const errRows = (result.errors||[]).map(e => `
+      <div style="padding:6px 0;border-top:1px solid var(--line);font-size:12.5px;">
+        <b>${e.plant||''}${e.company?' / '+e.company:''}</b> &mdash; <code class="f">${e.field}</code>: ${e.message}
+      </div>`).join('');
+    body.innerHTML = `<div class="remark-note" style="margin-top:10px;">Every coal source needs a valid Current VC before optimizing.</div>${errRows}`;
+    return;
+  }
+
+  if(result.status === 'Infeasible'){
+    heading.innerHTML = `Server Optimization Result <span class="badge bad">Infeasible</span>`;
+    body.innerHTML = `<div class="remark-note" style="margin-top:10px;">${result.message || 'No feasible allocation found under current constraints.'}</div>`;
+    return;
+  }
+
+  const statusBadgeClass = result.status === 'Optimal' ? 'ok' : 'na';
+  heading.innerHTML = `Server Optimization Result <span class="badge ${statusBadgeClass}">${result.status}</span>`;
+
+  const before = result.weighted_vc_before;
+  const after = result.weighted_vc_after;
+  const improvement = result.vc_improvement!==null&&result.vc_improvement!==undefined ? result.vc_improvement : (before - after);
+
+  const plantRows = (result.plants||[]).map(p => `
+    <tr>
+      <td>${p.plant}</td>
+      <td class="readonly">${fmt1(p.current_rakes)}</td>
+      <td class="readonly">${fmt1(p.optimized_rakes)}</td>
+      <td class="readonly">${p.current_vc!==null?p.current_vc.toFixed(4):'&mdash;'}</td>
+      <td class="readonly">${p.optimized_vc!==null?p.optimized_vc.toFixed(4):'&mdash;'}</td>
+      <td class="readonly" style="color:${p.delta_vc!==null&&p.delta_vc<=0?'var(--green)':'var(--rust)'}">${p.delta_vc!==null?(p.delta_vc>0?'+':'')+p.delta_vc.toFixed(4):'&mdash;'}</td>
+    </tr>`).join('');
+
+  const allocationRows = (result.allocations||[]).map(a => `
+    <tr>
+      <td>${a.plant}</td>
+      <td>${a.company}</td>
+      <td class="readonly">${fmt1(a.current_rakes)}</td>
+      <td class="readonly">${fmt1(a.optimized_rakes)}</td>
+      <td class="readonly">${a.source_vc.toFixed(4)}</td>
+      <td class="readonly" style="color:${a.delta_rakes>0?'var(--green)':(a.delta_rakes<0?'var(--rust)':'var(--steel)')}">${a.delta_rakes>0?'+':''}${fmt1(a.delta_rakes)}</td>
+    </tr>`).join('');
+
+  const constraintRows = (result.constraint_status||[]).map(c => `
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px;">
+      <span><span class="badge ${c.satisfied?'ok':'bad'}" style="margin-right:8px;">${c.satisfied?'OK':'FAIL'}</span>${c.name}</span>
+      <span class="readonly" style="font-family:'IBM Plex Mono',monospace;color:var(--steel);">${c.detail}</span>
+    </div>`).join('');
+
+  body.innerHTML = `
+    <div class="result-strip" style="margin-top:10px;">
+      <div><div class="kpi-label">Weighted Avg VC &mdash; Current</div><div class="kpi-value" style="font-size:20px">${before!==null?'&#8377;'+before.toFixed(4):'&mdash;'}</div></div>
+      <div class="arrow">&#8594;</div>
+      <div><div class="kpi-label">Weighted Avg VC &mdash; After Diversion</div><div class="kpi-value" style="font-size:20px">${after!==null?'&#8377;'+after.toFixed(4):'&mdash;'}</div></div>
+      <div><div class="kpi-label">VC Improvement</div><div class="kpi-value" style="font-size:20px;color:${improvement>=0?'var(--green)':'var(--rust)'}">${improvement>=0?'-':'+'}&#8377;${Math.abs(improvement).toFixed(4)}</div></div>
+    </div>
+
+    <div class="section-label" style="margin-top:18px;">Plant-wise VC (before / after diversion)</div>
+    <div class="tbl-wrap">
+      <table class="src">
+        <thead><tr><th>Plant</th><th>Current Rakes</th><th>Optimized Rakes</th><th>Current VC</th><th>VC After Diversion</th><th>Difference in VC</th></tr></thead>
+        <tbody>${plantRows}</tbody>
+      </table>
+    </div>
+
+    <div class="section-label" style="margin-top:18px;">Diversion matrix (plant &times; company allocation)</div>
+    ${(result.allocations||[]).length ? `
+    <div class="tbl-wrap">
+      <table class="src">
+        <thead><tr><th>Plant</th><th>Company</th><th>Current Rakes</th><th>Optimized Rakes</th><th>Source VC</th><th>Difference in Rakes</th></tr></thead>
+        <tbody>${allocationRows}</tbody>
+      </table>
+    </div>` : `<div class="remark-note">No diversions needed - current allocation is already optimal under these constraints.</div>`}
+
+    <div class="section-label" style="margin-top:18px;">Constraint validation</div>
+    <div style="margin-top:6px;">${constraintRows}</div>
+  `;
+}
+
+function showServerOptimizeError(title, messageHtml){
+  const wrap = document.getElementById('serverOptimizeWrap');
+  const body = document.getElementById('serverOptimizeBody');
+  const heading = document.getElementById('serverOptStatusHeading');
+  wrap.style.display = 'block';
+  heading.innerHTML = `Server Optimization Result <span class="badge bad">${title}</span>`;
+  body.innerHTML = `<div class="remark-note" style="margin-top:10px;">${messageHtml}</div>`;
+}
+
+let isServerOptimizing = false;
+
+document.getElementById('serverOptimizeBtn').addEventListener('click', async (event)=>{
+  event?.preventDefault();
+  if(isServerOptimizing) return; // belt-and-suspenders alongside btn.disabled below
+  isServerOptimizing = true;
+  const btn = document.getElementById('serverOptimizeBtn');
+  const original = btn.textContent;
+  btn.textContent = 'Solving...';
+  btn.disabled = true;
+  try{
+    // 1. Health check first, so a down backend fails fast with a clear,
+    // actionable message instead of a confusing network error later.
+    try{
+      const healthResp = await fetch(`${OPTIMIZER_API_BASE}/health`);
+      if(!healthResp.ok) throw new Error(`health check returned HTTP ${healthResp.status}`);
+    }catch(healthErr){
+      console.error('[optimizer] health check failed:', healthErr);
+      showServerOptimizeError('Backend offline',
+        'Optimizer backend is not running. Start Docker Desktop and the coal-optimizer-backend container.');
+      return;
+    }
+
+    const payload = buildOptimizePayload();
+    console.log('[optimizer] POST /optimize payload:', payload);
+
+    let resp;
+    try{
+      resp = await fetch(`${OPTIMIZER_API_BASE}/optimize`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+    }catch(networkErr){
+      console.error('[optimizer] network failure calling /optimize:', networkErr);
+      showServerOptimizeError('Network error',
+        `Could not reach <code>${OPTIMIZER_API_BASE}/optimize</code>. Details: ${networkErr.message}`);
+      return;
+    }
+
+    console.log('[optimizer] /optimize HTTP status:', resp.status);
+
+    if(resp.status === 422){
+      const detail = await resp.json().catch(()=>null);
+      console.error('[optimizer] 422 validation error:', detail);
+      const items = (detail && detail.detail) || [];
+      const msgs = items.length
+        ? items.map(d => `<div>${(d.loc||[]).join(' → ')}: ${d.msg}</div>`).join('')
+        : 'Request payload failed validation.';
+      showServerOptimizeError('Invalid request', msgs);
+      return;
+    }
+
+    if(!resp.ok){
+      const text = await resp.text().catch(()=>'');
+      console.error('[optimizer] /optimize returned HTTP', resp.status, text);
+      showServerOptimizeError('Backend error', `Backend returned HTTP ${resp.status}.${text ? ' Details: '+text : ''}`);
+      return;
+    }
+
+    let result;
+    try{
+      result = await resp.json();
+    }catch(parseErr){
+      console.error('[optimizer] failed to parse response JSON:', parseErr);
+      showServerOptimizeError('Invalid response', 'The backend returned a response that was not valid JSON.');
+      return;
+    }
+
+    console.log('[optimizer] /optimize response body:', result);
+    renderServerOptimizeResult(result);
+  }catch(err){
+    console.error('[optimizer] unexpected error:', err);
+    showServerOptimizeError('Error', `Unexpected error: ${err.message}`);
+  }finally{
+    isServerOptimizing = false;
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('serverOptimizeCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('serverOptimizeWrap').style.display = 'none';
+});
+
+render();
+</script>
+</body>
+</html>
