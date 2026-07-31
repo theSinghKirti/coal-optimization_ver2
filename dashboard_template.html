@@ -1002,6 +1002,11 @@ document.getElementById('optimizeAllBtn').addEventListener('click', ()=>{
 document.getElementById('resetAllBtn').addEventListener('click', ()=>{
   clearOverrides(); // discard manually-entered Current VC / Current Rakes too
   state = buildState();
+  // currentShare/totalRakes start as placeholders in buildState() - must be
+  // recomputed before applyFlexBand() reads currentShare, or every source's
+  // Min/Max % (and therefore the /optimize minRakes/maxRakes bounds) collapse
+  // to 0-20% uniformly, which the solver then reports as Infeasible.
+  recomputeAllShares();
   state.forEach(applyFlexBand);
   activeIdx = 0;
   document.getElementById('globalTarget').value = '4.00';
