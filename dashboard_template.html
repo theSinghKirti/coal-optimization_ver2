@@ -1016,7 +1016,12 @@ document.getElementById('resetAllBtn').addEventListener('click', ()=>{
 // reads the current plant/source data, POSTs it to the backend, and
 // renders the returned result in its own panel.
 // =====================================================================
-const OPTIMIZER_API_BASE = window.OPTIMIZER_API_BASE || 'http://localhost:8000';
+// Local dev (file:// or localhost) talks to the local Docker backend;
+// anywhere else (e.g. the Vercel-hosted copy) talks to the deployed Render
+// backend. Override by setting window.OPTIMIZER_API_BASE before this runs.
+const IS_LOCAL_HOST = ['localhost', '127.0.0.1', ''].includes(location.hostname);
+const OPTIMIZER_API_BASE = window.OPTIMIZER_API_BASE
+  || (IS_LOCAL_HOST ? 'http://localhost:8000' : 'https://coal-optimization-ver2.onrender.com');
 
 function buildOptimizePayload(){
   return {
