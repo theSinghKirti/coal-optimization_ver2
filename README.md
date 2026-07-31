@@ -7,9 +7,9 @@ coal-optimizer/
 ├── daily_variation.csv      # Sample daily-availability overrides (--daily flag)
 ├── main.py                  # CLI: reads input.xlsx, reproduces Excel VC, optimizes,
 │                             #      regenerates the dashboard HTML from live data
-├── dashboard_template.html  # The dashboard SOURCE (edit this, not output/dashboard.html)
+├── dashboard_template.html  # The dashboard SOURCE (edit this, not output/index.html)
 ├── output/
-│   ├── dashboard.html       # Generated: dashboard_template.html + live data from input.xlsx
+│   ├── index.html           # Generated: dashboard_template.html + live data from input.xlsx
 │   └── output.xlsx          # Generated: main.py's CLI run output
 └── backend/
     ├── main.py              # FastAPI app -> POST /optimize
@@ -25,7 +25,7 @@ pip install pandas openpyxl ortools
 python main.py                                  # basic run
 python main.py --daily daily_variation.csv      # apply daily availability overrides
 python main.py --freeze "Parichha:NCL=52"       # lock a plant-source allocation
-python main.py --dashboard dashboard_template.html   # regenerate output/dashboard.html
+python main.py --dashboard dashboard_template.html   # regenerate output/index.html
                                                        # with fresh data from input.xlsx
 ```
 
@@ -41,7 +41,7 @@ Optimize:     `POST http://localhost:8000/optimize`
 
 ## Opening the dashboard
 
-Open `output/dashboard.html` directly in a browser. It's fully self-contained
+Open `output/index.html` directly in a browser. It's fully self-contained
 (logo and data are embedded as base64/inline JSON - no external files needed
 except the Google Fonts CDN link, which degrades gracefully if offline).
 
@@ -56,7 +56,7 @@ Always edit `dashboard_template.html`, then regenerate:
 ```bash
 python main.py --dashboard dashboard_template.html
 ```
-This keeps `output/dashboard.html`'s embedded data in sync with `input.xlsx`
+This keeps `output/index.html`'s embedded data in sync with `input.xlsx`
 without you having to hand-edit the generated file.
 
 ## Known assumptions / things to verify against Sir's Excel

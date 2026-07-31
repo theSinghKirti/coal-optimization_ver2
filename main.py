@@ -373,7 +373,7 @@ def main():
                          help='Freeze cells, e.g. "Parichha:NCL=52,Panki:CCL=60"')
     parser.add_argument("--dashboard", default=None,
                          help="Path to the dashboard HTML template to refresh "
-                              "with live data from input.xlsx (writes to output/dashboard.html)")
+                              "with live data from input.xlsx (writes to output/index.html)")
     args = parser.parse_args()
 
     frozen = parse_freeze_arg(args.freeze)
@@ -459,7 +459,7 @@ def main():
         print("\n" + "=" * 60)
         print("STEP 8: Refreshing dashboard HTML from input.xlsx")
         print("=" * 60)
-        dashboard_out = "output/dashboard.html"
+        dashboard_out = "output/index.html"
         export_html(args.dashboard, dashboard_out)
 
 
