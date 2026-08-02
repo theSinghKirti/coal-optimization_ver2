@@ -50,6 +50,53 @@ at `http://localhost:8000`. Override the URL by setting
 `window.OPTIMIZER_API_BASE` before the dashboard's script runs, or editing the
 `OPTIMIZER_API_BASE` constant near the bottom of `dashboard_template.html`.
 
+## Official Optimization Flow
+
+This project has **three separate optimization implementations** (see
+`docs/OPTIMIZER_ARCHITECTURE.md` for the full comparison), but only **one is
+official**: `backend/optimizer.py`, via `POST /optimize`. Everything else in
+the dashboard is a fast, non-authoritative preview.
+
+1. The dashboard collects plant/source input (Current Rakes, Current VC,
+   Min %/Max % bounds) for every plant.
+2. Clicking **"Optimize Allocation (OR-Tools)"** sends the *entire
+   portfolio* - every plant, every source - to `POST /optimize` in one
+   request.
+3. `backend/optimizer.py` builds a single Integer Linear Program across all
+   plants at once and solves it with Google OR-Tools (SCIP), enforcing:
+   - exact company-wide rake conservation across all plants,
+   - each plant's total within `[plantMinPct, plantMaxPct]` (default
+     80-110%) of its current total,
+   - each plant-company allocation within the supplied min/max rakes,
+   - integer-only rake counts.
+4. The server's response is authoritative and is rendered into the
+   **"Official Optimization Result"** panel. This is the only place in the
+   dashboard where a genuinely final, constraint-checked allocation appears.
+5. The **"Preview Plant Mix"** / **"Preview All Plant Mixes"** buttons (and
+   the "Portfolio avg VC · preview" KPI card) run a different, much simpler
+   algorithm entirely in the browser - a per-plant water-filling estimate
+   with no cross-plant company conservation. It's useful for an instant
+   what-if before committing to a real solve, but it is explicitly labeled
+   "preview" everywhere it appears and must never be read as the final
+   answer.
+
+A few things worth being explicit about, since they're easy to misread:
+
+- **Current VC is an input, not an output.** You type it in per source; no
+  optimizer here ever generates or overwrites it. Only the *rake
+  allocation* is optimized - the cost coefficients stay fixed.
+- **Company-wise conservation is enforced only in the backend.** Neither
+  the dashboard's client-side preview nor the root CLI (`main.py`) checks
+  it - both only ever look at one plant at a time. This is why the
+  backend's achievable VC improvement is often smaller (but real) compared
+  to the preview's more optimistic (but not actually achievable) estimate.
+- **The root CLI (`main.py`) is a standalone tool**, not connected to the
+  dashboard or the backend. It has its own, separate, per-plant OR-Tools
+  attempt with a greedy fallback if OR-Tools is unavailable - but it never
+  presents that fallback as equivalent to an official result; every
+  fallback row is explicitly labeled `"Greedy (PREVIEW - not official)"` in
+  both its console output and `output/output.xlsx`.
+
 ## Editing the dashboard
 
 Always edit `dashboard_template.html`, then regenerate:

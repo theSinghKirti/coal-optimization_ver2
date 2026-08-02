@@ -211,7 +211,23 @@ def optimize_plant(df, plant, base_col="Rakes", frozen=None,
       - total rakes for the plant conserved at the CURRENT (base_col) total
       - each source's rakes stay within [min_pct, max_pct] x its base value
       - frozen (plant, source) cells are pinned to a fixed value
-    Uses OR-Tools if available; falls back to a greedy heuristic otherwise.
+
+    NOT THE OFFICIAL OPTIMIZER. This CLI is a standalone demo/reporting
+    tool, separate from backend/optimizer.py. The official, authoritative
+    optimizer for this project is backend/optimizer.py via POST /optimize -
+    it is the only implementation that enforces company-wide rake
+    conservation across ALL plants simultaneously; this function only ever
+    sees one plant at a time.
+
+    Tries this CLI's own OR-Tools model first. If OR-Tools is unavailable or
+    fails to find an optimal solution, this does NOT silently substitute a
+    greedy heuristic as if it were equivalent - it prints an explicit
+    warning and returns a "Method" column on every row so the caller (and
+    output.xlsx) can never mistake a greedy PREVIEW result for an official
+    OR-Tools solve.
+
+    Returns the result DataFrame with an added "Method" column: either
+    "OR-Tools" or "Greedy (PREVIEW - not official)".
     """
     frozen = frozen or {}
     sub = df[df["Plant"] == plant].reset_index(drop=True)
@@ -232,9 +248,12 @@ def optimize_plant(df, plant, base_col="Rakes", frozen=None,
             lower_bounds.append(lb)
             upper_bounds.append(max(ub, lb))
 
+    method = "OR-Tools"
     try:
         from ortools.linear_solver import pywraplp
         solver = pywraplp.Solver.CreateSolver("SCIP")
+        if solver is None:
+            raise RuntimeError("Could not create SCIP solver")
         vars_ = [solver.IntVar(lower_bounds[i], upper_bounds[i], sources[i])
                   for i in range(len(sources))]
 
@@ -245,9 +264,13 @@ def optimize_plant(df, plant, base_col="Rakes", frozen=None,
         if status == pywraplp.Solver.OPTIMAL:
             optimized = [v.solution_value() for v in vars_]
         else:
-            raise RuntimeError("Solver did not find optimal solution, falling back")
+            raise RuntimeError(f"Solver did not find an optimal solution (status={status})")
     except Exception as e:
-        print(f"(OR-Tools unavailable or failed for {plant}: {e}) -> using greedy heuristic")
+        method = "Greedy (PREVIEW - not official)"
+        print(f"WARNING: OR-Tools solver was unavailable or failed for '{plant}': {e}")
+        print("         Official optimization was not performed for this plant.")
+        print("         Showing a PREVIEW-ONLY greedy heuristic result instead - "
+              "do not treat this as the official allocation.")
         order = sorted(range(len(sources)), key=lambda i: costs[i])
         remaining = total_rakes
         optimized = list(lower_bounds)
@@ -265,13 +288,27 @@ def optimize_plant(df, plant, base_col="Rakes", frozen=None,
     result = sub.copy()
     result["Optimized Rakes"] = optimized
     result["Frozen"] = [(plant, s) in frozen for s in sources]
+    result["Method"] = method
     return result
 
 
 def optimize_all_plants(df, base_col="Rakes", frozen=None):
     frames = [optimize_plant(df, plant, base_col=base_col, frozen=frozen)
               for plant in df["Plant"].unique()]
-    return pd.concat(frames, ignore_index=True)
+    combined = pd.concat(frames, ignore_index=True)
+
+    fallback_plants = sorted(combined.loc[combined["Method"] != "OR-Tools", "Plant"].unique())
+    if fallback_plants:
+        print("\n" + "!" * 60)
+        print("OR-Tools solver was unavailable or failed for the following "
+              "plant(s). Official optimization was not performed for them:")
+        for p in fallback_plants:
+            print(f"  - {p}")
+        print("Their rows are PREVIEW-ONLY (greedy heuristic) and are labeled "
+              "as such in the 'Method' column of the export.")
+        print("!" * 60)
+
+    return combined
 
 
 # ---------------------------------------------------------------
@@ -409,25 +446,31 @@ def main():
     print(df_daily[["Plant", "Source", "Rakes", "Available Rakes", "Variable Cost"]].to_string(index=False))
 
     print("\n" + "=" * 60)
-    print("STEP 6: Optimizer - ALL plants (base = Available Rakes, frozen cells applied)")
+    print("STEP 6: CLI Optimizer PREVIEW - ALL plants (base = Available Rakes, frozen cells applied)")
     print("=" * 60)
+    print("NOTE: This CLI optimizer is NOT the project's official optimizer.")
+    print("      The official, authoritative result comes only from")
+    print("      backend/optimizer.py via POST /optimize (portfolio-wide")
+    print("      OR-Tools solve with company-wide conservation). This CLI")
+    print("      optimizes one plant at a time and has no such guarantee.")
     if frozen:
         print(f"Frozen cells: {frozen}")
     opt_all = optimize_all_plants(df_daily, base_col="Available Rakes", frozen=frozen)
     print(opt_all[["Plant", "Source", "Rakes", "Available Rakes", "Variable Cost",
-                   "Optimized Rakes", "Frozen"]].to_string(index=False))
+                   "Optimized Rakes", "Frozen", "Method"]].to_string(index=False))
 
-    print("\nPer-plant VC comparison (Original vs Optimized):")
+    print("\nPer-plant VC comparison (Original vs Optimized) - PREVIEW, not official:")
     for plant in opt_all["Plant"].unique():
         sub = opt_all[opt_all["Plant"] == plant]
         old_weighted = (sub["Rakes"] * sub["Variable Cost"]).sum() / sub["Rakes"].sum()
         new_weighted = (sub["Optimized Rakes"] * sub["Variable Cost"]).sum() / sub["Optimized Rakes"].sum()
         opt_status = "Achieved" if new_weighted <= TARGET_VC else "Not Achieved"
+        method = sub["Method"].iloc[0]
         print(f"  {plant:25s}  Old VC: {old_weighted:.3f}  ->  New VC: {new_weighted:.3f}"
-              f"  (Target {TARGET_VC})  [{opt_status}]")
+              f"  (Target {TARGET_VC})  [{opt_status}]  [{method}]")
 
     print("\n" + "=" * 60)
-    print("STEP 7: Saving output.xlsx")
+    print("STEP 7: Saving output.xlsx (CLI PREVIEW export - not the official result)")
     print("=" * 60)
 
     export_rows = []
@@ -436,6 +479,7 @@ def main():
         old_weighted = (sub["Rakes"] * sub["Variable Cost"]).sum() / sub["Rakes"].sum()
         new_weighted = (sub["Optimized Rakes"] * sub["Variable Cost"]).sum() / sub["Optimized Rakes"].sum()
         opt_status = "Achieved" if new_weighted <= TARGET_VC else "Not Achieved"
+        method = sub["Method"].iloc[0]
         for _, r in sub.iterrows():
             export_rows.append({
                 "Plant": r["Plant"],
@@ -444,16 +488,21 @@ def main():
                 "Daily Available Rakes": r["Available Rakes"],
                 "Optimized Rakes": r["Optimized Rakes"],
                 "Frozen": r["Frozen"],
+                "Method": method,
+                "Result Type": "PREVIEW (CLI, not official)",
                 "Old VC (plant)": round(old_weighted, 4),
                 "New VC (plant)": round(new_weighted, 4),
                 "Target VC": TARGET_VC,
-                "Target Status": opt_status,
+                "Target Status (preview)": opt_status,
             })
 
     out_df = pd.DataFrame(export_rows)
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     out_df.to_excel(OUTPUT_FILE, index=False, sheet_name="Result")
     print(f"Saved: {OUTPUT_FILE}")
+    print("NOTE: output.xlsx is a CLI PREVIEW export. For the official,")
+    print("      authoritative allocation, use the dashboard's")
+    print('      "Optimize Allocation (OR-Tools)" button (POST /optimize).')
 
     if args.dashboard:
         print("\n" + "=" * 60)

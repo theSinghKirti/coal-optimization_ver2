@@ -279,9 +279,9 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
           <div class="target-input-wrap"><span>&#8377;</span><input type="number" step="0.01" id="globalTarget" class="target-num" value="4.00"><span>/unit</span></div>
         </div>
       </div>
-      <button class="btn btn-gold" id="optimizeAllBtn">Optimize all plants</button>
+      <button class="btn btn-gold" id="optimizeAllBtn" title="Client-side estimate only - does not enforce company-wide conservation across plants">Preview All Plant Mixes</button>
       <button class="btn btn-ghost" id="resetAllBtn">Reset to source data</button>
-      <button class="btn btn-gold" id="serverOptimizeBtn" type="button" title="Solves with Google OR-Tools on the FastAPI backend">Optimize Allocation (OR-Tools)</button>
+      <button class="btn btn-gold" id="serverOptimizeBtn" type="button" title="The only authoritative optimizer - solves the full portfolio with Google OR-Tools on the FastAPI backend">Optimize Allocation (OR-Tools)</button>
     </div>
   </div>
 </div>
@@ -290,11 +290,26 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   <div class="kpi-strip" id="kpiStrip"></div>
 </div>
 
+<!-- Everything above this line (KPI "preview" card + the per-plant panel's
+     "Preview" split/VC) is a client-side, in-browser estimate. It is NOT
+     authoritative: it optimizes one plant at a time and does not enforce
+     company-wide rake conservation across plants. The only authoritative
+     result in this dashboard is the "Official Optimization Result" panel
+     below, produced by POST /optimize (backend/optimizer.py, OR-Tools). -->
+<div class="kpi-wrap">
+  <div class="remark-note" style="font-size:11.5px;">
+    <b>Preview only</b> &mdash; the KPI card above and each plant's "Preview" split/VC below use a fast in-browser estimate that optimizes one plant at a time and does not perform cross-plant rake diversion or company-wise conservation. Use <b>&ldquo;Optimize Allocation (OR-Tools)&rdquo;</b> for the official, authoritative result.
+  </div>
+</div>
+
+<!-- AUTHORITATIVE / OFFICIAL section. Populated only from a real
+     POST /optimize response (see renderServerOptimizeResult()). Never
+     merge client-side preview values into this panel. -->
 <div class="kpi-wrap" id="serverOptimizeWrap" style="display:none;">
   <div class="panel">
     <div class="panel-head">
       <div>
-        <h2 id="serverOptStatusHeading">Server Optimization Result</h2>
+        <h2 id="serverOptStatusHeading">Official Optimization Result <span class="badge na">Server OR-Tools</span></h2>
       </div>
       <div class="panel-actions">
         <button class="btn btn-ghost" id="serverOptimizeCloseBtn">Close</button>
@@ -316,11 +331,11 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   <div class="cols">
     <div>
       <h4>Method</h4>
-      Each coal source's landed cost is modelled as <code class="f">Landed = Rate + Freight (Rs/MT)</code>, consistent with the source workbook (the quoted Premium% is contractual context on bridge-linkage rates and isn't separately added). Variable charge is <code class="f">VC = Landed &times; SCC &divide; (1 &minus; APC%) &divide; 1000</code>. For each plant, the optimizer is a bounded fractional (water-filling) allocation: it fills the cheapest source first, up to its Max % cap, then the next cheapest, until 100% of the rake volume is placed &mdash; the exact optimum for a linear blend under Min/Max share constraints. This is a planning aid built from the uploaded worksheet; it does not reflect real-time rake booking, FSA trigger-level obligations, or CIL allocation decisions, and every input cell remains editable.
+      Each coal source's landed cost is modelled as <code class="f">Landed = Rate + Freight (Rs/MT)</code>, consistent with the source workbook (the quoted Premium% is contractual context on bridge-linkage rates and isn't separately added). Variable charge is <code class="f">VC = Landed &times; SCC &divide; (1 &minus; APC%) &divide; 1000</code> for the Formula VC reference column only &mdash; the actual optimizer input is the editable Current VC. There are two distinct optimizers here: the <b>Preview</b> buttons run a bounded fractional (water-filling) allocation entirely in your browser, one plant at a time, with no cross-plant company conservation &mdash; useful for a fast what-if, not authoritative. The <b>&ldquo;Optimize Allocation (OR-Tools)&rdquo;</b> button is the only official result: it sends the whole portfolio to a Google OR-Tools solver on the backend, which enforces exact company-wide conservation, plant-total bounds, and integer rakes across all plants at once. This is a planning aid built from the uploaded worksheet; it does not reflect real-time rake booking, FSA trigger-level obligations, or CIL allocation decisions, and every input cell remains editable.
     </div>
     <div>
       <h4>Reading the panel</h4>
-      <b>Current split</b> uses each plant's July-2026 rake receipts (falling back to the MSQ rake share where receipts aren't recorded). <b>Min/Max %</b> default to the current split &plusmn; the flex band below the source table &mdash; widen a source's Max to let the optimizer lean on it harder, or raise its Min to protect a contractual floor. A plant with no feasible mix under its current caps shows the shortfall and the cheapest source to unlock.
+      <b>Current Rakes</b> default to each plant's July-2026 rake receipts (falling back to the MSQ rake share where receipts aren't recorded) and are fully editable. <b>Min/Max %</b> default to the current split &plusmn; the flex band below the source table &mdash; widen a source's Max to let the Preview optimizer lean on it harder, or raise its Min to protect a contractual floor. A plant with no feasible Preview mix under its current caps shows the shortfall and the cheapest source to unlock.
     </div>
   </div>
 </footer>
@@ -673,10 +688,15 @@ function applyFlexBand(plant){
 }
 state.forEach(applyFlexBand);
 
-// ---------- optimizer: bounded water-filling ----------
-// Cost coefficient is the manually-entered Current VC (s.currentVC), never
-// the Rate/Freight/SCC/APC formula - the optimizer changes only the rake
-// allocation and never touches source-level VC values.
+// ---------- PREVIEW ONLY - NOT AUTHORITATIVE: bounded water-filling ----------
+// This is a fast, in-browser estimate for ONE plant at a time. It does NOT
+// enforce company-wide rake conservation across plants (backend/optimizer.py
+// does). Never present its output as the official/final allocation - it
+// exists purely so a user can see an instant "what if" before running the
+// real POST /optimize solve. Cost coefficient is the manually-entered
+// Current VC (s.currentVC), never the Rate/Freight/SCC/APC formula - this
+// preview changes only the rake allocation and never touches source-level
+// VC values.
 function optimizePlant(plant){
   const srcs = plant.sources.map(s=>({name:s.name, vc:s.currentVC, min:s.minShare/100, max:s.maxShare/100}));
   const sumMin = srcs.reduce((a,s)=>a+s.min,0);
@@ -708,10 +728,14 @@ function currentBlendedVC(plant){
   return plant.sources.reduce((a,s)=>a + (s.currentRakes||0)*s.currentVC, 0) / total;
 }
 
-// Apply an optimizer result to a plant: the optimized split becomes the
-// new "current" rakes, so the change is actually visible (train bars move,
-// VC numbers update, KPI strip reflects it) instead of the button being
-// a no-op re-render of already-live-computed numbers. Source-level Current
+// PREVIEW ONLY. Applies the client-side preview result to a plant: the
+// previewed split becomes the new "current" rakes, so the change is
+// actually visible (train bars move, VC numbers update, KPI strip
+// reflects it) instead of the button being a no-op re-render of
+// already-live-computed numbers. This only updates the INPUT state that a
+// subsequent official POST /optimize call will read - it never writes into
+// (or is confused with) the "Official Optimization Result" panel, which is
+// populated exclusively from a real backend response. Source-level Current
 // VC is never modified - only currentRakes changes.
 function applyOptimizedToPlant(plant){
   const r = optimizePlant(plant);
@@ -746,6 +770,10 @@ function render(){
   renderPanel();
 }
 
+// The "optimized"/"preview" figures in this KPI strip come from the
+// client-side per-plant water-filling preview (optimizePlant), NOT from the
+// backend. They are labeled "preview" in the rendered markup below - do not
+// remove that qualifier or treat this card as the official result.
 function renderKPI(){
   const results = state.map(p=>optimizePlant(p));
   let wSumCur=0, wSumOpt=0, wTot=0, metBefore=0, metAfter=0, rakesShifted=0;
@@ -776,17 +804,17 @@ function renderKPI(){
       <div class="kpi-value">&#8377;${fmt2(avgCur)}<small>/unit</small></div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Portfolio avg VC &middot; optimized</div>
+      <div class="kpi-label">Portfolio avg VC &middot; preview <span class="badge na" style="margin-top:0;">client-side</span></div>
       <div class="kpi-value">&#8377;${fmt2(avgOpt)}<small>/unit</small></div>
       <div class="kpi-delta ${delta<=0?'pos':'neg'}">${delta<=0?'&#9660;':'&#9650;'} ${fmt2(Math.abs(delta))} vs current</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Plants at or under target</div>
+      <div class="kpi-label">Plants at or under target <span style="color:var(--steel-soft);font-weight:500;">(preview)</span></div>
       <div class="kpi-value">${metAfter}<small>/${state.length}</small></div>
       <div class="kpi-delta ${metAfter>=metBefore?'pos':'neg'}">was ${metBefore}/${state.length} before</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Rake volume reallocated / mo</div>
+      <div class="kpi-label">Rake volume reallocated / mo <span style="color:var(--steel-soft);font-weight:500;">(preview)</span></div>
       <div class="kpi-value">${fmt1(rakesShifted)}<small>rakes</small></div>
     </div>
   `;
@@ -859,7 +887,7 @@ function renderPanel(){
             Total current rakes
             <input class="cell-input" style="width:56px" type="number" step="0.1" id="totalRakesInput" value="${plant.totalRakes}" readonly title="Computed automatically as the sum of each source's Current Rakes">
           </label>
-          <button class="btn btn-navy" id="optimizeOneBtn">Optimize this plant</button>
+          <button class="btn btn-navy" id="optimizeOneBtn" title="Client-side estimate only for this plant - does not enforce company-wide conservation">Preview Plant Mix</button>
         </div>
       </div>
       ${plant.remark ? `<div class="remark-note">${plant.remark}</div>` : ''}
@@ -871,7 +899,7 @@ function renderPanel(){
         </div>
         <div class="arrow">&#8594;</div>
         <div class="result-item">
-          <div class="rlabel">Optimized VC (model)</div>
+          <div class="rlabel">Preview VC <span class="badge na" style="margin-top:0;">client-side, not official</span></div>
           <div class="rvalue" style="color:${r.infeasible?'var(--rust)':'var(--green)'}">${r.infeasible?'infeasible':('&#8377;'+fmt2(opt))}</div>
         </div>
         <div class="result-item">
@@ -886,12 +914,12 @@ function renderPanel(){
 
       <div class="wagons-block">
         <div class="wagons-row">
-          <div class="wagons-label"><span>Current rake split &middot; ${plant.basis==='receipt'?'July 2026 receipts':(plant.basis==='msq'?'MSQ share (no July receipts recorded)':'even split &ndash; no data')}</span><span>${fmt2(cur)} &#8377;/unit (model)</span></div>
+          <div class="wagons-label"><span>Current rake split &middot; ${plant.basis==='receipt'?'July 2026 receipts':(plant.basis==='msq'?'MSQ share (no July receipts recorded)':'even split &ndash; no data')}</span><span>${fmt2(cur)} &#8377;/unit</span></div>
           <div class="train">${trainCurrent}</div>
           <div class="rails"></div>
         </div>
         <div class="wagons-row">
-          <div class="wagons-label"><span>Optimized rake split</span><span>${r.infeasible?'&mdash;':fmt2(opt)+' &#8377;/unit'}</span></div>
+          <div class="wagons-label"><span>Preview rake split (client-side, not official)</span><span>${r.infeasible?'&mdash;':fmt2(opt)+' &#8377;/unit'}</span></div>
           <div class="train">${trainOptimized}</div>
           <div class="rails"></div>
         </div>
@@ -910,7 +938,7 @@ function renderPanel(){
           <thead><tr>
             <th>Source</th><th>Annual linkage<br>(Lac MT)</th><th>Rate<br>(Rs/MT)</th><th>Premium</th><th>Freight<br>(Rs/MT)</th>
             <th>Landed<br>(Rs/MT)</th><th>SCC<br>(kg/kWh)</th><th>APC %</th><th>Formula VC<br>(ref., Rs/unit)</th>
-            <th>Current VC<br>(Rs/unit)</th><th>Current<br>Rakes</th><th>Min %</th><th>Max %</th><th>Optimized<br>split</th>
+            <th>Current VC<br>(Rs/unit)</th><th>Current<br>Rakes</th><th>Min %</th><th>Max %</th><th>Preview<br>split</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -919,10 +947,11 @@ function renderPanel(){
   `;
 
   // wire events
+  // PREVIEW ONLY - see applyOptimizedToPlant() comment above.
   document.getElementById('optimizeOneBtn').addEventListener('click', ()=>{
     const ok = applyOptimizedToPlant(plant);
     render();
-    flashButton('optimizeOneBtn', 'Applied \u2713', 'Infeasible \u2014 widen Max %', ok);
+    flashButton('optimizeOneBtn', 'Preview applied \u2713', 'Infeasible \u2014 widen Max %', ok);
   });
   // totalRakesInput is read-only (derived as the sum of Current Rakes below) - no listener needed.
   document.getElementById('flexBand').addEventListener('input', e=>{
@@ -962,11 +991,12 @@ document.getElementById('globalTarget').addEventListener('input', e=>{
   globalTarget = parseFloat(e.target.value)||0;
   render();
 });
+// PREVIEW ONLY - see applyOptimizedToPlant() comment above.
 document.getElementById('optimizeAllBtn').addEventListener('click', ()=>{
   let anyApplied = false;
   state.forEach(p=>{ if(applyOptimizedToPlant(p)) anyApplied = true; });
   render();
-  flashButton('optimizeAllBtn', 'Applied to all \u2713', 'No feasible plants', anyApplied);
+  flashButton('optimizeAllBtn', 'Preview applied to all \u2713', 'No feasible plants', anyApplied);
 });
 document.getElementById('resetAllBtn').addEventListener('click', ()=>{
   clearOverrides(); // discard manually-entered Current VC / Current Rakes too
@@ -984,11 +1014,15 @@ document.getElementById('resetAllBtn').addEventListener('click', ()=>{
 });
 
 // =====================================================================
-// Server-side OR-Tools optimization (FastAPI backend at /optimize)
-// This is entirely additive: it does not touch any existing state,
-// calculation, or the client-side heuristic optimizer above. It only
-// reads the current plant/source data, POSTs it to the backend, and
-// renders the returned result in its own panel.
+// AUTHORITATIVE / OFFICIAL: Server-side OR-Tools optimization
+// (FastAPI backend at /optimize, backend/optimizer.py).
+//
+// This is the ONLY official optimizer in this dashboard. It is entirely
+// additive to the state above: it does not touch any existing state or the
+// client-side preview optimizer. It only reads the current plant/source
+// data, POSTs it to the backend, and renders the returned result into the
+// "Official Optimization Result" panel (#serverOptimizeWrap) - which is
+// never populated from, or mixed with, client-side preview values.
 // =====================================================================
 // Local dev (file:// or localhost) talks to the local Docker backend;
 // anywhere else (e.g. the Vercel-hosted copy) talks to the deployed Render
@@ -1019,7 +1053,7 @@ function renderServerOptimizeResult(result){
   wrap.style.display = 'block';
 
   if(result.status === 'validation_error'){
-    heading.innerHTML = `Server Optimization Result <span class="badge bad">Validation error</span>`;
+    heading.innerHTML = `Official Optimization Result <span class="badge bad">Validation error</span>`;
     const errRows = (result.errors||[]).map(e => `
       <div style="padding:6px 0;border-top:1px solid var(--line);font-size:12.5px;">
         <b>${e.plant||''}${e.company?' / '+e.company:''}</b> &mdash; <code class="f">${e.field}</code>: ${e.message}
@@ -1029,13 +1063,13 @@ function renderServerOptimizeResult(result){
   }
 
   if(result.status === 'Infeasible'){
-    heading.innerHTML = `Server Optimization Result <span class="badge bad">Infeasible</span>`;
+    heading.innerHTML = `Official Optimization Result <span class="badge bad">Infeasible</span>`;
     body.innerHTML = `<div class="remark-note" style="margin-top:10px;">${result.message || 'No feasible allocation found under current constraints.'}</div>`;
     return;
   }
 
   const statusBadgeClass = result.status === 'Optimal' ? 'ok' : 'na';
-  heading.innerHTML = `Server Optimization Result <span class="badge ${statusBadgeClass}">${result.status}</span>`;
+  heading.innerHTML = `Official Optimization Result <span class="badge ${statusBadgeClass}">${result.status}</span>`;
 
   const before = result.weighted_vc_before;
   const after = result.weighted_vc_after;
@@ -1102,7 +1136,7 @@ function showServerOptimizeError(title, messageHtml){
   const body = document.getElementById('serverOptimizeBody');
   const heading = document.getElementById('serverOptStatusHeading');
   wrap.style.display = 'block';
-  heading.innerHTML = `Server Optimization Result <span class="badge bad">${title}</span>`;
+  heading.innerHTML = `Official Optimization Result <span class="badge bad">${title}</span>`;
   body.innerHTML = `<div class="remark-note" style="margin-top:10px;">${messageHtml}</div>`;
 }
 
