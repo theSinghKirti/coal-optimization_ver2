@@ -304,6 +304,27 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
         <div style="font-size:11px;color:var(--steel);margin-top:3px;">Official OR-Tools Allocation &mdash; All Plants</div>
       </div>
     </div>
+
+    <!-- FEATURE 4: Optimization Summary. Uses the SAME lastOfficialResult as
+         the Portfolio Rake Distribution table above - never the preview
+         optimizer. See deriveOptimizationSummary()/renderOptimizationSummary()
+         below; both this and the table are cleared together by the shared
+         invalidateOfficialResult(). -->
+    <div id="optimizationSummarySection" style="margin:14px 0 22px;">
+      <div class="section-label">Optimization Summary</div>
+      <div style="font-size:11px;color:var(--steel);margin-top:2px;margin-bottom:8px;">Official OR-Tools Portfolio Result</div>
+      <div id="optimizationSummaryEmpty" class="remark-note" style="margin-top:0;">
+        Run <b>&ldquo;Optimize Allocation (OR-Tools)&rdquo;</b> to view the official portfolio summary.
+      </div>
+      <div id="optimizationSummaryBody" style="display:none;" aria-live="polite">
+        <div class="kpi-strip" id="optimizationSummaryCards"></div>
+        <div style="margin-top:16px;">
+          <div class="section-label">Exceptions Requiring Attention</div>
+          <div id="optimizationExceptions" style="margin-top:6px;"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="portfolioRakeEmpty" class="remark-note" style="margin-top:10px;">
       Run <b>&ldquo;Optimize Allocation (OR-Tools)&rdquo;</b> to view the consolidated portfolio distribution.
     </div>
@@ -722,6 +743,21 @@ let lastOfficialResult = null;
 let portfolioSortField = null;
 let portfolioSortDir = 'asc';
 
+// Single shared invalidation point for BOTH official-result views (the
+// Portfolio Rake Distribution table and the Optimization Summary/exceptions
+// - Feature 4). Called whenever an optimization-relevant input changes
+// (Current VC/Rakes, Min/Max %, Premium, Linkage, Target VC) or a new
+// official run fails/is invalid, so a stale result is never shown next to
+// changed inputs. Function is defined here but calls renderPortfolioRakeTable()/
+// renderOptimizationSummary() (declared further down) - safe, since function
+// declarations are hoisted and this is only ever invoked from event handlers
+// that run after the whole script has loaded.
+function invalidateOfficialResult(){
+  lastOfficialResult = null;
+  renderPortfolioRakeTable();
+  renderOptimizationSummary();
+}
+
 // Keeps totalRakes / currentShare in sync with the editable currentRakes per
 // source. Called at the top of render() so every downstream calculation
 // (flex band, optimizer bounds, KPIs, the /optimize payload) sees fresh
@@ -827,6 +863,7 @@ function render(){
   renderTabs();
   renderPanel();
   renderPortfolioRakeTable(); // FEATURE 3 - redraws from lastOfficialResult (or the empty state); never clears it by itself
+  renderOptimizationSummary(); // FEATURE 4 - same source of truth, same rule: redraws only, never clears
 }
 
 // The "optimized"/"preview" figures in this KPI strip come from the
@@ -1015,7 +1052,7 @@ function renderPanel(){
     const val = e.target.value;
     plant.linkageType = val;
     saveOverride(plant.name, '__plant__', 'linkageType', val);
-    lastOfficialResult = null; // FEATURE 3: displayed operational info changed - clear the stale official table
+    invalidateOfficialResult(); // FEATURE 3/4: displayed operational info changed - clear the stale official table + summary
     render();
   });
   // PREVIEW ONLY - see applyOptimizedToPlant() comment above.
@@ -1029,7 +1066,7 @@ function renderPanel(){
     plant.flexBand = parseFloat(e.target.value);
     document.getElementById('flexBandVal').textContent = `\u00b1${plant.flexBand} pp`;
     applyFlexBand(plant);
-    lastOfficialResult = null; // FEATURE 3: Min/Max bounds changed - clear the stale official table
+    invalidateOfficialResult(); // FEATURE 3/4: Min/Max bounds changed - clear the stale official table + summary
     render();
   });
   document.querySelectorAll('table.src input[data-field]').forEach(inp=>{
@@ -1048,11 +1085,11 @@ function renderPanel(){
       if(field==='currentVC' || field==='currentRakes' || field==='premium'){
         saveOverride(plant.name, srcName, field, val);
       }
-      // FEATURE 3: any source-level edit here (Current VC/Rakes, Min/Max %,
+      // FEATURE 3/4: any source-level edit here (Current VC/Rakes, Min/Max %,
       // Premium, Rate/Freight/SCC/APC) changes the operational picture the
-      // official table was computed from - clear it rather than show a
-      // now-stale official result next to freshly-edited inputs.
-      lastOfficialResult = null;
+      // official table/summary were computed from - clear them rather than
+      // show a now-stale official result next to freshly-edited inputs.
+      invalidateOfficialResult();
       render();
     });
   });
@@ -1069,6 +1106,11 @@ function renderTrain(items){
 // ---------- global controls ----------
 document.getElementById('globalTarget').addEventListener('input', e=>{
   globalTarget = parseFloat(e.target.value)||0;
+  // FEATURE 4: Target VC is one of the inputs the Optimization Summary's
+  // Plants Meeting/Above Target and exceptions are computed against -
+  // clear the official table/summary rather than show them stale against
+  // a changed target.
+  invalidateOfficialResult();
   render();
 });
 // PREVIEW ONLY - see applyOptimizedToPlant() comment above.
@@ -1090,7 +1132,7 @@ document.getElementById('resetAllBtn').addEventListener('click', ()=>{
   activeIdx = 0;
   document.getElementById('globalTarget').value = '4.00';
   globalTarget = 4.00;
-  lastOfficialResult = null; // FEATURE 3: inputs reverted to source data - the official table no longer reflects them
+  invalidateOfficialResult(); // FEATURE 3/4: inputs reverted to source data - the official table/summary no longer reflect them
   render();
 });
 
@@ -1330,6 +1372,146 @@ function renderPortfolioRakeTable(){
   updatePortfolioSortIndicators();
 }
 
+// =====================================================================
+// FEATURE 4: Optimization Summary. Reads the SAME lastOfficialResult as
+// the Portfolio Rake Distribution table above - never the preview
+// optimizer, never recalculated from source/RAW_DATA.
+// =====================================================================
+
+// Pure derivation from a raw /optimize response into summary metrics. Does
+// not mutate `result`. Total Rakes Reallocated sums only POSITIVE
+// delta_rakes - under company conservation every increase is matched by an
+// equal decrease elsewhere, so summing both sides would double-count the
+// same physical rake movement; summing one side counts each movement once.
+function deriveOptimizationSummary(result){
+  const allocations = result.allocations || [];
+  const plants = result.plants || [];
+
+  let totalReallocated = 0;
+  let largestIncrease = null; // {plant, source, delta}
+  let largestDecrease = null; // {plant, source, delta}
+  allocations.forEach(a=>{
+    const d = a.delta_rakes;
+    if(d > 0){
+      totalReallocated += d;
+      if(!largestIncrease || d > largestIncrease.delta) largestIncrease = {plant:a.plant, source:a.company, delta:d};
+    }else if(d < 0){
+      if(!largestDecrease || d < largestDecrease.delta) largestDecrease = {plant:a.plant, source:a.company, delta:d};
+    }
+  });
+
+  let meetingTarget = 0, aboveTarget = 0;
+  const vcExceptions = [];
+  const unavailablePlants = [];
+  plants.forEach(p=>{
+    const ov = p.optimized_vc;
+    if(ov===null || ov===undefined || isNaN(ov)){
+      unavailablePlants.push(p.plant); // excluded from both meeting/above counts, per spec
+      return;
+    }
+    if(ov <= globalTarget){
+      meetingTarget++;
+    }else{
+      aboveTarget++;
+      vcExceptions.push({plant:p.plant, optimizedVC: ov, amountAbove: ov - globalTarget});
+    }
+  });
+
+  // Backend wording is shown verbatim (name/detail) - never reworded here.
+  const constraintExceptions = (result.constraint_status || []).filter(c=>c.satisfied===false);
+
+  return {
+    vcBefore: result.weighted_vc_before, vcAfter: result.weighted_vc_after,
+    vcImprovement: result.vc_improvement,
+    totalReallocated, meetingTarget, aboveTarget,
+    largestIncrease, largestDecrease,
+    vcExceptions, constraintExceptions, unavailablePlants,
+  };
+}
+
+// Redraws the Optimization Summary from lastOfficialResult. Called from
+// render() (mirrors renderPortfolioRakeTable()) and directly after every
+// POST /optimize attempt resolves.
+function renderOptimizationSummary(){
+  const emptyEl = document.getElementById('optimizationSummaryEmpty');
+  const bodyEl = document.getElementById('optimizationSummaryBody');
+  const cardsEl = document.getElementById('optimizationSummaryCards');
+  const excEl = document.getElementById('optimizationExceptions');
+  if(!emptyEl || !bodyEl || !cardsEl || !excEl) return;
+
+  if(!lastOfficialResult){
+    emptyEl.style.display = 'block';
+    bodyEl.style.display = 'none';
+    cardsEl.innerHTML = '';
+    excEl.innerHTML = '';
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+  bodyEl.style.display = 'block';
+
+  const s = deriveOptimizationSummary(lastOfficialResult);
+  const vcFmt = v => (v===null||v===undefined||isNaN(v)) ? '&mdash;' : ('&#8377;'+fmt2(v));
+  const impColor = s.vcImprovement>0 ? 'var(--green)' : (s.vcImprovement<0 ? 'var(--rust)' : 'var(--steel)');
+
+  cardsEl.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Portfolio VC &middot; Before &rarr; After</div>
+      <div class="kpi-value" style="font-size:19px">${vcFmt(s.vcBefore)} &rarr; ${vcFmt(s.vcAfter)}<small>/unit</small></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">VC Improvement</div>
+      <div class="kpi-value" style="color:${impColor}">${vcFmt(s.vcImprovement)}<small>/unit</small></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Rakes Reallocated</div>
+      <div class="kpi-value">${fmt1(s.totalReallocated)}<small>rakes</small></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Plants Meeting Target</div>
+      <div class="kpi-value">${s.meetingTarget}<small>/${s.meetingTarget + s.aboveTarget}</small></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Plants Above Target</div>
+      <div class="kpi-value" style="color:${s.aboveTarget>0?'var(--rust)':'var(--navy)'}">${s.aboveTarget}<small>/${s.meetingTarget + s.aboveTarget}</small></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Largest Increase</div>
+      ${s.largestIncrease
+        ? `<div class="kpi-value" style="font-size:15px;">${s.largestIncrease.plant} &middot; ${s.largestIncrease.source}</div><div class="kpi-delta pos">&#9650; +${fmt1(s.largestIncrease.delta)} rakes</div>`
+        : `<div class="kpi-value" style="font-size:15px;color:var(--steel);">No increase</div><div class="kpi-delta">0 rakes</div>`}
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Largest Decrease</div>
+      ${s.largestDecrease
+        ? `<div class="kpi-value" style="font-size:15px;">${s.largestDecrease.plant} &middot; ${s.largestDecrease.source}</div><div class="kpi-delta neg">&#9660; ${fmt1(s.largestDecrease.delta)} rakes</div>`
+        : `<div class="kpi-value" style="font-size:15px;color:var(--steel);">No decrease</div><div class="kpi-delta">0 rakes</div>`}
+    </div>
+  `;
+
+  const vcExcRows = s.vcExceptions.map(e => `
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px;">
+      <span><b>${e.plant}</b></span>
+      <span class="readonly" style="font-family:'IBM Plex Mono',monospace;color:var(--rust);">Optimized VC &#8377;${fmt2(e.optimizedVC)} &mdash; &#8377;${fmt2(e.amountAbove)} above target</span>
+    </div>`).join('');
+
+  const constraintExcRows = s.constraintExceptions.map(c => `
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px;">
+      <span><span class="badge bad" style="margin-right:8px;">FAIL</span>${c.name}</span>
+      <span class="readonly" style="font-family:'IBM Plex Mono',monospace;color:var(--steel);">${c.detail}</span>
+    </div>`).join('');
+
+  const unavailableNote = s.unavailablePlants.length
+    ? `<div style="font-size:11.5px;color:var(--steel);margin-top:8px;">${s.unavailablePlants.length} plant(s) have no optimized VC available: ${s.unavailablePlants.join(', ')}.</div>`
+    : '';
+
+  excEl.innerHTML =
+    (s.vcExceptions.length
+      ? vcExcRows
+      : `<div class="remark-note" style="margin-top:0;">No VC target exceptions identified.</div>`)
+    + constraintExcRows + unavailableNote;
+}
+
 function showServerOptimizeError(title, messageHtml){
   const wrap = document.getElementById('serverOptimizeWrap');
   const body = document.getElementById('serverOptimizeBody');
@@ -1337,11 +1519,11 @@ function showServerOptimizeError(title, messageHtml){
   wrap.style.display = 'block';
   heading.innerHTML = `Official Optimization Result <span class="badge bad">${title}</span>`;
   body.innerHTML = `<div class="remark-note" style="margin-top:10px;">${messageHtml}</div>`;
-  // FEATURE 3: every failure path (offline backend, network error, 422,
+  // FEATURE 3/4: every failure path (offline backend, network error, 422,
   // backend error, invalid JSON, unexpected exception) routes through here -
-  // never leave a stale successful table showing after a failed re-run.
-  lastOfficialResult = null;
-  renderPortfolioRakeTable();
+  // never leave a stale successful table/summary showing after a failed
+  // re-run.
+  invalidateOfficialResult();
 }
 
 let isServerOptimizing = false;
@@ -1415,11 +1597,17 @@ document.getElementById('serverOptimizeBtn').addEventListener('click', async (ev
 
     console.log('[optimizer] /optimize response body:', result);
     renderServerOptimizeResult(result);
-    // FEATURE 3: the Portfolio Rake Distribution table is authoritative only
-    // for a successful (Optimal/Feasible) result - any other status
-    // (validation_error, Infeasible) must clear it, never show partial data.
-    lastOfficialResult = (result.status==='Optimal' || result.status==='Feasible') ? result : null;
-    renderPortfolioRakeTable();
+    // FEATURE 3/4: the Portfolio Rake Distribution table and Optimization
+    // Summary are authoritative only for a successful (Optimal/Feasible)
+    // result - any other status (validation_error, Infeasible) must clear
+    // both, never show partial data.
+    if(result.status==='Optimal' || result.status==='Feasible'){
+      lastOfficialResult = result;
+      renderPortfolioRakeTable();
+      renderOptimizationSummary();
+    }else{
+      invalidateOfficialResult();
+    }
   }catch(err){
     console.error('[optimizer] unexpected error:', err);
     showServerOptimizeError('Error', `Unexpected error: ${err.message}`);
