@@ -629,6 +629,12 @@ function buildState(){
     if(receiptSum > 0) basis = 'receipt';
     else if(msqSum > 0) basis = 'msq';
 
+    // Plant-level override (edited Linkage type) - reuses the same
+    // overrides store as per-source fields, keyed with a '__plant__'
+    // sentinel source name since it belongs to the plant, not a source.
+    const plantOv = overrides[p.name + '||__plant__'] || {};
+    const linkageType = plantOv.linkageType !== undefined ? plantOv.linkageType : p.linkageType;
+
     const n = raw.length;
     const sources = raw.map(s=>{
       let defaultRakes;
@@ -651,7 +657,7 @@ function buildState(){
       };
     });
     return {
-      name:p.name, linkageType:p.linkageType, vcMoD:p.vcMoD, currentVC:p.currentVC, remark:p.remark,
+      name:p.name, linkageType, vcMoD:p.vcMoD, currentVC:p.currentVC, remark:p.remark,
       basis, totalRakes: 0, // recomputed by recomputeAllShares()
       flexBand: 20,
       sources,
@@ -879,7 +885,10 @@ function renderPanel(){
     <div class="panel">
       <div class="panel-head">
         <div>
-          <h2>${plant.name}<span class="tag">${plant.linkageType||''}</span></h2>
+          <h2>${plant.name}<select class="tag" id="linkageTypeSelect" style="cursor:pointer;">
+            <option value="Linkage"${plant.linkageType==='Linkage'?' selected':''}>Linkage</option>
+            <option value="Bridge Linkage"${plant.linkageType==='Bridge Linkage'?' selected':''}>Bridge Linkage</option>
+          </select></h2>
           ${baseline!==null&&baseline!==undefined?`<div style="font-size:11px;color:var(--steel);margin-top:3px;">Excel-reported baseline VC: &#8377;${fmt2(baseline)}</div>`:''}
         </div>
         <div class="panel-actions">
@@ -947,6 +956,14 @@ function renderPanel(){
   `;
 
   // wire events
+  // Linkage type is a plant-level, manually-editable field - persisted via
+  // the same saveOverride()/localStorage mechanism as Current VC/Rakes.
+  document.getElementById('linkageTypeSelect').addEventListener('change', e=>{
+    const val = e.target.value;
+    plant.linkageType = val;
+    saveOverride(plant.name, '__plant__', 'linkageType', val);
+    render();
+  });
   // PREVIEW ONLY - see applyOptimizedToPlant() comment above.
   document.getElementById('optimizeOneBtn').addEventListener('click', ()=>{
     const ok = applyOptimizedToPlant(plant);
