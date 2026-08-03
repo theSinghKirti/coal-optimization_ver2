@@ -290,6 +290,44 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   <div class="kpi-strip" id="kpiStrip"></div>
 </div>
 
+<!-- FEATURE 3: Portfolio Rake Distribution. Populated ONLY from a
+     successful (Optimal/Feasible) POST /optimize response - see
+     lastOfficialResult / renderPortfolioRakeTable() below. Never populated
+     from the client-side preview optimizer. Cleared back to the empty
+     state whenever an optimization-relevant input changes, a new official
+     run fails, or "Reset to source data" is clicked. -->
+<div class="kpi-wrap">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Portfolio Rake Distribution</h2>
+        <div style="font-size:11px;color:var(--steel);margin-top:3px;">Official OR-Tools Allocation &mdash; All Plants</div>
+      </div>
+    </div>
+    <div id="portfolioRakeEmpty" class="remark-note" style="margin-top:10px;">
+      Run <b>&ldquo;Optimize Allocation (OR-Tools)&rdquo;</b> to view the consolidated portfolio distribution.
+    </div>
+    <div class="tbl-wrap" id="portfolioRakeTableWrap" style="display:none;">
+      <table class="src" id="portfolioRakeTable">
+        <thead>
+          <tr>
+            <th data-sort="plant" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;text-align:left;">Plant</th>
+            <th data-sort="linkage" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;">Linkage</th>
+            <th data-sort="source" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;">Source</th>
+            <th data-sort="currentRakes" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;">Current Rakes</th>
+            <th data-sort="optimizedRakes" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;">Optimized Rakes</th>
+            <th data-sort="delta" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;">Delta</th>
+            <th data-sort="currentVC" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;">Current VC</th>
+            <th data-sort="optimizedVC" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;">Optimized VC</th>
+            <th data-sort="status" tabindex="0" role="columnheader" aria-sort="none" style="cursor:pointer;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="portfolioRakeTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- Everything above this line (KPI "preview" card + the per-plant panel's
      "Preview" split/VC) is a client-side, in-browser estimate. It is NOT
      authoritative: it optimizes one plant at a time and does not enforce
@@ -706,6 +744,15 @@ let state = buildState();
 let activeIdx = 0;
 let globalTarget = 4.00;
 
+// FEATURE 3: Portfolio Rake Distribution state. lastOfficialResult holds the
+// raw, unmutated response from the most recent SUCCESSFUL (Optimal/Feasible)
+// POST /optimize call - see the serverOptimizeBtn handler and
+// showServerOptimizeError() below. It is the single source of truth for the
+// portfolio table; nothing here ever reads from the preview optimizer.
+let lastOfficialResult = null;
+let portfolioSortField = null;
+let portfolioSortDir = 'asc';
+
 // Keeps totalRakes / currentShare in sync with the editable currentRakes per
 // source. Called at the top of render() so every downstream calculation
 // (flex band, optimizer bounds, KPIs, the /optimize payload) sees fresh
@@ -810,6 +857,7 @@ function render(){
   renderKPI();
   renderTabs();
   renderPanel();
+  renderPortfolioRakeTable(); // FEATURE 3 - redraws from lastOfficialResult (or the empty state); never clears it by itself
 }
 
 // The "optimized"/"preview" figures in this KPI strip come from the
@@ -998,6 +1046,7 @@ function renderPanel(){
     const val = e.target.value;
     plant.linkageType = val;
     saveOverride(plant.name, '__plant__', 'linkageType', val);
+    lastOfficialResult = null; // FEATURE 3: displayed operational info changed - clear the stale official table
     render();
   });
   // PREVIEW ONLY - see applyOptimizedToPlant() comment above.
@@ -1011,6 +1060,7 @@ function renderPanel(){
     plant.flexBand = parseFloat(e.target.value);
     document.getElementById('flexBandVal').textContent = `\u00b1${plant.flexBand} pp`;
     applyFlexBand(plant);
+    lastOfficialResult = null; // FEATURE 3: Min/Max bounds changed - clear the stale official table
     render();
   });
   document.querySelectorAll('table.src input[data-field]').forEach(inp=>{
@@ -1029,6 +1079,11 @@ function renderPanel(){
       if(field==='currentVC' || field==='currentRakes' || field==='premium'){
         saveOverride(plant.name, srcName, field, val);
       }
+      // FEATURE 3: any source-level edit here (Current VC/Rakes, Min/Max %,
+      // Premium, Rate/Freight/SCC/APC) changes the operational picture the
+      // official table was computed from - clear it rather than show a
+      // now-stale official result next to freshly-edited inputs.
+      lastOfficialResult = null;
       render();
     });
   });
@@ -1066,6 +1121,7 @@ document.getElementById('resetAllBtn').addEventListener('click', ()=>{
   activeIdx = 0;
   document.getElementById('globalTarget').value = '4.00';
   globalTarget = 4.00;
+  lastOfficialResult = null; // FEATURE 3: inputs reverted to source data - the official table no longer reflects them
   render();
 });
 
@@ -1187,6 +1243,124 @@ function renderServerOptimizeResult(result){
   `;
 }
 
+// =====================================================================
+// FEATURE 3: Portfolio Rake Distribution - consolidated, sortable view of
+// EVERY plant/source from the official response, on one page. Reads only
+// lastOfficialResult (set below only for a successful Optimal/Feasible
+// POST /optimize) - never the preview optimizer's results.
+// =====================================================================
+
+// Pure mapping from a raw /optimize response into display rows. Does not
+// mutate `result` (the backend response) or `state` (frontend input) -
+// returns a brand new array every call, safe to sort freely.
+function buildPortfolioRows(result){
+  const plantVCByName = {};
+  (result.plants||[]).forEach(p=>{ plantVCByName[p.plant] = p; });
+  return (result.allocations||[]).map(a=>{
+    const pv = plantVCByName[a.plant] || {};
+    // Linkage isn't part of the backend response (and never will be - it's
+    // not sent to /optimize). Resolve it from the existing frontend `state`
+    // array, which already holds whatever the user edited (Feature 1) or
+    // the RAW_DATA default if untouched - so an edited linkage is always
+    // reflected here, never the stale original.
+    const statePlant = state.find(p=>p.name===a.plant);
+    const linkage = statePlant ? statePlant.linkageType : '';
+    const optimizedVC = pv.optimized_vc;
+    let status;
+    if(optimizedVC===null || optimizedVC===undefined || isNaN(optimizedVC)){
+      status = 'Unavailable';
+    }else if(optimizedVC <= globalTarget){
+      status = 'At Target';
+    }else{
+      status = 'Above Target';
+    }
+    return {
+      plant: a.plant, linkage, source: a.company,
+      currentRakes: a.current_rakes, optimizedRakes: a.optimized_rakes,
+      delta: a.delta_rakes,
+      currentVC: pv.current_vc!==undefined ? pv.current_vc : null,
+      optimizedVC: optimizedVC!==undefined ? optimizedVC : null,
+      status,
+    };
+  });
+}
+
+const PORTFOLIO_SORT_TEXT_FIELDS = new Set(['plant', 'linkage', 'source', 'status']);
+
+function updatePortfolioSortIndicators(){
+  document.querySelectorAll('#portfolioRakeTable thead th[data-sort]').forEach(th=>{
+    if(!th.dataset.label) th.dataset.label = th.textContent.trim();
+    const field = th.dataset.sort;
+    if(field===portfolioSortField){
+      th.setAttribute('aria-sort', portfolioSortDir==='asc' ? 'ascending' : 'descending');
+      th.textContent = th.dataset.label + (portfolioSortDir==='asc' ? ' ▲' : ' ▼');
+    }else{
+      th.setAttribute('aria-sort', 'none');
+      th.textContent = th.dataset.label;
+    }
+  });
+}
+
+// Redraws the Portfolio Rake Distribution section from lastOfficialResult.
+// Called from render() (so it stays in sync with e.g. a changed Target
+// ceiling) AND directly after every POST /optimize attempt resolves. Never
+// clears lastOfficialResult itself - callers decide that (see the
+// serverOptimizeBtn handler and showServerOptimizeError() below).
+function renderPortfolioRakeTable(){
+  const emptyEl = document.getElementById('portfolioRakeEmpty');
+  const tableWrapEl = document.getElementById('portfolioRakeTableWrap');
+  const tbody = document.getElementById('portfolioRakeTbody');
+  if(!emptyEl || !tableWrapEl || !tbody) return;
+
+  if(!lastOfficialResult){
+    emptyEl.style.display = 'block';
+    tableWrapEl.style.display = 'none';
+    tbody.innerHTML = '';
+    updatePortfolioSortIndicators();
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+  tableWrapEl.style.display = 'block';
+
+  let rows = buildPortfolioRows(lastOfficialResult);
+  if(portfolioSortField){
+    const isText = PORTFOLIO_SORT_TEXT_FIELDS.has(portfolioSortField);
+    rows = rows.slice().sort((a,b)=>{
+      let cmp;
+      if(isText){
+        cmp = String(a[portfolioSortField]||'').toLowerCase().localeCompare(String(b[portfolioSortField]||'').toLowerCase());
+      }else{
+        const av = a[portfolioSortField], bv = b[portfolioSortField];
+        const an = (av===null||av===undefined||isNaN(av)) ? -Infinity : av;
+        const bn = (bv===null||bv===undefined||isNaN(bv)) ? -Infinity : bv;
+        cmp = an - bn;
+      }
+      return portfolioSortDir==='asc' ? cmp : -cmp;
+    });
+  }
+
+  tbody.innerHTML = rows.map(r=>{
+    const rowBg = r.status==='Above Target' ? 'background:var(--rust-soft);' : '';
+    const deltaColor = r.delta>0 ? 'var(--green)' : (r.delta<0 ? 'var(--rust)' : 'var(--steel)');
+    const deltaText = r.delta>0 ? `▲ +${fmt1(Math.abs(r.delta))}` : (r.delta<0 ? `▼ -${fmt1(Math.abs(r.delta))}` : '—');
+    const statusBadgeClass = r.status==='At Target' ? 'ok' : (r.status==='Above Target' ? 'bad' : 'na');
+    return `<tr>
+      <td style="${rowBg}">${r.plant}</td>
+      <td class="readonly" style="${rowBg}">${r.linkage || '&mdash;'}</td>
+      <td style="${rowBg}">${r.source}</td>
+      <td class="readonly" style="${rowBg}">${fmt1(r.currentRakes)}</td>
+      <td class="readonly" style="${rowBg}">${fmt1(r.optimizedRakes)}</td>
+      <td class="readonly" style="${rowBg}color:${deltaColor};font-weight:700;">${deltaText}</td>
+      <td class="readonly" style="${rowBg}">${r.currentVC!==null?r.currentVC.toFixed(4):'&mdash;'}</td>
+      <td class="readonly" style="${rowBg}">${r.optimizedVC!==null?r.optimizedVC.toFixed(4):'&mdash;'}</td>
+      <td style="${rowBg}"><span class="badge ${statusBadgeClass}">${r.status}</span></td>
+    </tr>`;
+  }).join('');
+
+  updatePortfolioSortIndicators();
+}
+
 function showServerOptimizeError(title, messageHtml){
   const wrap = document.getElementById('serverOptimizeWrap');
   const body = document.getElementById('serverOptimizeBody');
@@ -1194,6 +1368,11 @@ function showServerOptimizeError(title, messageHtml){
   wrap.style.display = 'block';
   heading.innerHTML = `Official Optimization Result <span class="badge bad">${title}</span>`;
   body.innerHTML = `<div class="remark-note" style="margin-top:10px;">${messageHtml}</div>`;
+  // FEATURE 3: every failure path (offline backend, network error, 422,
+  // backend error, invalid JSON, unexpected exception) routes through here -
+  // never leave a stale successful table showing after a failed re-run.
+  lastOfficialResult = null;
+  renderPortfolioRakeTable();
 }
 
 let isServerOptimizing = false;
@@ -1267,6 +1446,11 @@ document.getElementById('serverOptimizeBtn').addEventListener('click', async (ev
 
     console.log('[optimizer] /optimize response body:', result);
     renderServerOptimizeResult(result);
+    // FEATURE 3: the Portfolio Rake Distribution table is authoritative only
+    // for a successful (Optimal/Feasible) result - any other status
+    // (validation_error, Infeasible) must clear it, never show partial data.
+    lastOfficialResult = (result.status==='Optimal' || result.status==='Feasible') ? result : null;
+    renderPortfolioRakeTable();
   }catch(err){
     console.error('[optimizer] unexpected error:', err);
     showServerOptimizeError('Error', `Unexpected error: ${err.message}`);
@@ -1279,6 +1463,26 @@ document.getElementById('serverOptimizeBtn').addEventListener('click', async (ev
 
 document.getElementById('serverOptimizeCloseBtn').addEventListener('click', ()=>{
   document.getElementById('serverOptimizeWrap').style.display = 'none';
+});
+
+// FEATURE 3: sortable headers are static markup (not regenerated per-render
+// like the table body), so they're wired exactly once here, alongside the
+// other one-time listeners above - this avoids ever attaching duplicates.
+document.querySelectorAll('#portfolioRakeTable thead th[data-sort]').forEach(th=>{
+  const toggleSort = ()=>{
+    const field = th.dataset.sort;
+    if(portfolioSortField===field){
+      portfolioSortDir = portfolioSortDir==='asc' ? 'desc' : 'asc';
+    }else{
+      portfolioSortField = field;
+      portfolioSortDir = 'asc';
+    }
+    renderPortfolioRakeTable(); // client-side only - no backend call, no mutation of lastOfficialResult
+  };
+  th.addEventListener('click', toggleSort);
+  th.addEventListener('keydown', e=>{
+    if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggleSort(); }
+  });
 });
 
 render();
