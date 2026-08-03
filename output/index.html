@@ -648,9 +648,14 @@ function buildState(){
       // as a sensible starting point, but is fully editable and independent
       // of that formula from then on (per task spec's 3-way VC distinction).
       const currentVC = ov.currentVC!==undefined ? ov.currentVC : (Math.round(unitVC(s)*100)/100);
+      // Premium is editable the same way as Rate/Freight/SCC/APC. It is NOT
+      // part of the landedCost()/unitVC() formula (see footer "Method" note:
+      // it's contractual context on bridge-linkage rates, not separately
+      // added), so editing it never changes Current VC or the optimizer.
+      const premium = ov.premium!==undefined ? ov.premium : s.premium;
       return {
         ...s,
-        rate:s.rate, freight:s.freight, scc:s.scc, apc:s.apc,
+        rate:s.rate, freight:s.freight, scc:s.scc, apc:s.apc, premium,
         currentRakes, currentVC,
         currentShare: 0, // recomputed by recomputeAllShares()
         minShare: 0, maxShare: 100 // recomputed by applyFlexBand
@@ -863,7 +868,7 @@ function renderPanel(){
       <td><span class="chip" style="background:${colorFor(s.name)}"></span>${s.name}</td>
       <td class="readonly">${s.annualLinkage!==null?s.annualLinkage:'&mdash;'}</td>
       <td><input class="cell-input" type="number" step="1" data-field="rate" value="${s.rate}"></td>
-      <td class="readonly">${s.premium}%</td>
+      <td><input class="cell-input" type="number" step="0.1" data-field="premium" value="${s.premium}"></td>
       <td><input class="cell-input" type="number" step="1" data-field="freight" value="${s.freight}"></td>
       <td class="readonly">${fmt0(landed)}</td>
       <td><input class="cell-input" type="number" step="0.01" data-field="scc" value="${s.scc}"></td>
@@ -985,9 +990,12 @@ function renderPanel(){
       const src = plant.sources.find(s=>s.name===srcName);
       const val = parseFloat(e.target.value);
       src[field] = val;
-      // Current VC / Current Rakes are the manually-entered monthly inputs -
-      // persist immediately so they survive a page reload (see LS_KEY above).
-      if(field==='currentVC' || field==='currentRakes'){
+      // Current VC / Current Rakes / Premium are persisted immediately so
+      // they survive a page reload (see LS_KEY above). Premium is display
+      // context only - editing it never touches Current VC (see buildState()
+      // comment) - Landed Cost/Formula VC below simply re-render from the
+      // row's current rate/freight/scc/apc as they always have.
+      if(field==='currentVC' || field==='currentRakes' || field==='premium'){
         saveOverride(plant.name, srcName, field, val);
       }
       render();
