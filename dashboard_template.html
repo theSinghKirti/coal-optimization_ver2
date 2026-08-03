@@ -779,14 +779,14 @@ let portfolioSortDir = 'asc';
 // - Feature 4). Called whenever an optimization-relevant input changes
 // (Current VC/Rakes, Min/Max %, Premium, Linkage, Target VC) or a new
 // official run fails/is invalid, so a stale result is never shown next to
-// changed inputs. Function is defined here but calls renderPortfolioRakeTable()/
-// renderOptimizationSummary() (declared further down) - safe, since function
-// declarations are hoisted and this is only ever invoked from event handlers
-// that run after the whole script has loaded.
+// changed inputs. Pure state clear only - deliberately does NOT render.
+// Every call site except two (showServerOptimizeError() and the
+// non-Optimal/Feasible branch in the serverOptimizeBtn handler) is
+// immediately followed by the umbrella render(), which already redraws
+// both views; having this function also render would redraw the
+// table/summary twice per edit for no visible benefit.
 function invalidateOfficialResult(){
   lastOfficialResult = null;
-  renderPortfolioRakeTable();
-  renderOptimizationSummary();
 }
 
 // Keeps totalRakes / currentShare in sync with the editable currentRakes per
@@ -1553,8 +1553,11 @@ function showServerOptimizeError(title, messageHtml){
   // FEATURE 3/4: every failure path (offline backend, network error, 422,
   // backend error, invalid JSON, unexpected exception) routes through here -
   // never leave a stale successful table/summary showing after a failed
-  // re-run.
+  // re-run. No umbrella render() follows this call site, so render both
+  // views explicitly.
   invalidateOfficialResult();
+  renderPortfolioRakeTable();
+  renderOptimizationSummary();
 }
 
 let isServerOptimizing = false;
@@ -1634,11 +1637,11 @@ document.getElementById('serverOptimizeBtn').addEventListener('click', async (ev
     // both, never show partial data.
     if(result.status==='Optimal' || result.status==='Feasible'){
       lastOfficialResult = result;
-      renderPortfolioRakeTable();
-      renderOptimizationSummary();
     }else{
       invalidateOfficialResult();
     }
+    renderPortfolioRakeTable();
+    renderOptimizationSummary();
   }catch(err){
     console.error('[optimizer] unexpected error:', err);
     showServerOptimizeError('Error', `Unexpected error: ${err.message}`);
