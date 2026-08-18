@@ -265,10 +265,10 @@ def test_result_depends_only_on_request_body_not_on_prior_calls():
     assert body1["weighted_vc_after"] != body2["weighted_vc_after"]
 
 
-def test_rsd_threshold_conflicting_payload_is_infeasible():
-    """RSD/VC thresholds are HARD constraints: a portfolio that cannot keep
-    every thresholded plant at or below its threshold is infeasible as a
-    whole (no shutdown minimization is performed)."""
+def test_rsd_threshold_conflicting_stage1_stage2():
+    """RSD/VC thresholds are SOFT constraints minimized lexicographically:
+    when one plant cannot stay under its threshold, the solver accepts a
+    single RSD plant (Stage 1) and only then minimizes VC (Stage 2)."""
     payload = {
         "plants": [
             {
@@ -293,17 +293,25 @@ def test_rsd_threshold_conflicting_payload_is_infeasible():
     assert resp.status_code == 200
     body = resp.json()
 
-    assert body["status"] == "Infeasible"
-    assert "RSD" in body["message"]
-    assert body["allocations"] == []
-    assert body["total_shutdowns"] == 0
+    assert body["status"] in ("Optimal", "Feasible")
+    assert body["total_shutdowns"] == 1
+
+    plant_a = next(p for p in body["plants"] if p["plant"] == "PlantA")
+    plant_b = next(p for p in body["plants"] if p["plant"] == "PlantB")
+
+    assert plant_a["rsd_status"] == "safe"
+    assert plant_b["rsd_status"] == "rsd"
+    assert not plant_a["exceeded_threshold"]
+    assert plant_b["exceeded_threshold"]
+    assert abs(plant_a["optimized_vc"] - 4.10) < 1e-4
+    assert abs(plant_b["optimized_vc"] - 4.186364) < 1e-4
+    assert abs(body["weighted_vc_after"] - 4.1475) < 1e-4
 
 
-def test_rsd_threshold_hard_constraint_drives_solution():
-    """With hard thresholds, the solver must rebalance across plants so every
-    thresholded plant lands at or below its threshold - even though the
-    unconstrained optimum (all cheap Co1 rakes to PlantA) would leave
-    PlantB above it."""
+def test_rsd_threshold_satisfiable_yields_zero_rsd_plants():
+    """When every thresholded plant can be kept at or below its threshold,
+    the solver achieves K=0 RSD plants and minimizes VC within that - the
+    result matches the unconstrained-RSD optimum under the same bounds."""
     payload = {
         "plants": [
             {
@@ -334,6 +342,8 @@ def test_rsd_threshold_hard_constraint_drives_solution():
     plant_a = next(p for p in body["plants"] if p["plant"] == "PlantA")
     plant_b = next(p for p in body["plants"] if p["plant"] == "PlantB")
 
+    assert plant_a["rsd_status"] == "safe"
+    assert plant_b["rsd_status"] == "safe"
     assert plant_a["rsd_threshold_vc"] == 4.30
     assert plant_b["rsd_threshold_vc"] == 4.30
     assert plant_a["optimized_vc"] <= 4.30 + 1e-6
@@ -357,12 +367,63 @@ def test_rsd_threshold_hard_constraint_drives_solution():
     assert all(c["satisfied"] for c in rsd_constraints)
 
 
+def test_rsd_status_distinguishes_safe_rsd_and_no_constraint():
+    payload = {
+        "plants": [
+            {
+                "plant": "PlantSafe",
+                "rsd_threshold_vc": 4.20,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 10, "current_vc": 4.10, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 0, "current_vc": 4.40, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+            {
+                "plant": "PlantR",
+                "rsd_threshold_vc": 4.12,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 0, "current_vc": 4.05, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 10, "current_vc": 4.20, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+            {
+                "plant": "PlantNC",
+                "sources": [
+                    {"company": "Co1", "current_rakes": 0, "current_vc": 4.05, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 0, "current_vc": 4.45, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+        ]
+    }
+    resp = client.post("/optimize", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["status"] in ("Optimal", "Feasible")
+    # Only the two thresholded plants count toward shutdowns.
+    assert body["total_shutdowns"] == 1
+
+    safe = next(p for p in body["plants"] if p["plant"] == "PlantSafe")
+    rsd = next(p for p in body["plants"] if p["plant"] == "PlantR")
+    nc = next(p for p in body["plants"] if p["plant"] == "PlantNC")
+
+    assert safe["rsd_status"] == "safe"
+    assert safe["exceeded_threshold"] is False
+    assert rsd["rsd_status"] == "rsd"
+    assert rsd["exceeded_threshold"] is True
+    assert nc["rsd_status"] == "no_constraint"
+    assert nc["exceeded_threshold"] is False
+    assert nc["rsd_threshold_vc"] is None
+
+
 def test_plant_without_threshold_is_unconstrained():
     resp = client.post("/optimize", json=VALID_PAYLOAD)
     assert resp.status_code == 200
     body = resp.json()
 
     assert body["status"] in ("Optimal", "Feasible")
+    assert body["total_shutdowns"] == 0
     assert all(p["rsd_threshold_vc"] is None for p in body["plants"])
+    assert all(p["rsd_status"] == "no_constraint" for p in body["plants"])
     assert all(not p["exceeded_threshold"] for p in body["plants"])
     assert not any(c["name"].startswith("RSD threshold") for c in body["constraint_status"])

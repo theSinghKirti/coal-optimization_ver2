@@ -18,11 +18,14 @@ subject to:
                                   company's total is conserved, the
                                   grand total is conserved too.
   5. Integer allocation        - all decision variables are integers.
-  6. RSD threshold constraint  - for each plant with a configured RSD/VC
-                                  threshold, the plant's optimized
-                                  rake-weighted VC must stay <= threshold
-                                  (hard constraint; plants with a null/
-                                  empty threshold are unconstrained).
+  6. RSD shutdown minimization - for each plant with a configured RSD/VC
+                                  threshold, a plant is "in RSD" when its
+                                  optimized rake-weighted VC exceeds the
+                                  threshold. The solver first minimizes the
+                                  total number of RSD plants (plants without
+                                  a threshold are never counted), then, with
+                                  that minimum locked in, minimizes total
+                                  weighted VC (lexicographic objectives).
 
 current_vc is a manually entered, monthly input (see schemas.SourceInput) -
 it is used as-is as the per-source cost coefficient. The optimizer never
@@ -161,55 +164,82 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
             solver.Add(plant_sum >= lower)
             solver.Add(plant_sum <= upper)
 
-        # Constraint 6: RSD threshold (hard). For each plant with a
-        # configured threshold, the optimized rake-weighted VC must satisfy
-        #   sum(x_i * vc_i) / sum(x_i) <= threshold
-        # Linearized (multiplying through by the plant total, which is >= 0;
-        # at zero rakes the constraint is trivially satisfied) as:
-        #   sum(x_i * (vc_i - threshold)) <= 0
-        for plant_name, threshold in rsd_thresholds.items():
-            idxs = by_plant.get(plant_name)
-            if idxs:
-                solver.Add(
-                    solver.Sum(variables[i] * (rows[i][3] - threshold) for i in idxs) <= 0
-                )
-
         return solver, variables
 
-    # ---- Single solve: minimize total weighted VC subject to the core
-    # constraints and the (hard) RSD threshold constraints. No shutdown
-    # minimization: thresholds are hard constraints, so an allocation that
-    # cannot keep every thresholded plant at or below its threshold is
-    # infeasible as a whole.
-    solver, variables = build_solver_with_core_constraints()
-    if solver is None:
-        return OptimizeResponse(status="Infeasible", message="Could not create SCIP solver")
+    # ---- RSD shutdown minimization (lexicographic).
+    # A plant is "in RSD" when its optimized rake-weighted VC exceeds its
+    # configured threshold; plants without a threshold are never counted.
+    # Stage 1 minimizes the number of RSD plants; Stage 2 then minimizes
+    # total weighted VC with that minimum RSD count locked in. The rake,
+    # plant-total, company-conservation and plant-company bounds above are
+    # preserved in both stages.
 
-    # Objective: minimize total weighted variable cost
-    solver.Minimize(
-        solver.Sum(variables[idx] * rows[idx][3] for idx in range(len(rows)))
-    )
+    def add_rsd_shutdown_constraints(solver, variables):
+        """Add a binary RSD indicator per thresholded plant via a Big-M
+        constraint:
+            sum(x_i * (vc_i - threshold)) <= M_p * shutdown_p
+        shutdown_p can be 0 only when the plant's blended VC fits under its
+        threshold; plants without a threshold get no indicator. Returns
+        {plant: shutdown variable}."""
+        shutdown_vars: Dict[str, "pywraplp.Variable"] = {}
+        for plant_name, threshold in rsd_thresholds.items():
+            idxs = by_plant.get(plant_name)
+            if not idxs:
+                continue
+            shutdown_p = solver.IntVar(0, 1, f"shutdown_{plant_name}")
+            shutdown_vars[plant_name] = shutdown_p
+            # Valid Big-M: LHS <= sum over i of ub_i * max(0, vc_i - threshold).
+            M_p = max(
+                1.0,
+                sum(max(0.0, rows[i][3] - threshold) * variables[i].Ub() for i in idxs),
+            )
+            solver.Add(
+                solver.Sum(variables[i] * (rows[i][3] - threshold) for i in idxs)
+                <= M_p * shutdown_p
+            )
+        return shutdown_vars
 
-    status = solver.Solve()
-
-    infeasible_message = (
-        "No feasible allocation satisfies company conservation, "
-        "plant-total bounds, and plant-company bounds"
-    )
-    if rsd_thresholds:
-        infeasible_message += ", and the configured RSD/VC thresholds"
-    infeasible_message += " simultaneously."
-
-    if status not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
+    def infeasible_response() -> OptimizeResponse:
         return OptimizeResponse(
             status="Infeasible",
             weighted_vc_before=round(weighted_vc_before, 6) if weighted_vc_before is not None else None,
-            message=infeasible_message,
+            message=(
+                "No feasible allocation satisfies company conservation, "
+                "plant-total bounds, and plant-company bounds simultaneously."
+            ),
         )
 
-    solved_status = "Optimal" if status == pywraplp.Solver.OPTIMAL else "Feasible"
+    # Stage 1: minimize the number of RSD plants
+    K = 0
+    if rsd_thresholds:
+        solver1, variables1 = build_solver_with_core_constraints()
+        if solver1 is None:
+            return OptimizeResponse(status="Infeasible", message="Could not create SCIP solver")
+        shutdown_vars1 = add_rsd_shutdown_constraints(solver1, variables1)
+        solver1.Minimize(solver1.Sum(shutdown_vars1.values()))
+        status1 = solver1.Solve()
+        if status1 not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
+            return infeasible_response()
+        K = int(round(sum(v.solution_value() for v in shutdown_vars1.values())))
 
-    optimized_rakes_by_idx = {idx: variables[idx].solution_value() for idx in range(len(rows))}
+    # Stage 2: minimize total weighted VC with the minimum RSD count locked in
+    solver2, variables2 = build_solver_with_core_constraints()
+    if solver2 is None:
+        return OptimizeResponse(status="Infeasible", message="Could not create SCIP solver")
+    shutdown_vars2 = add_rsd_shutdown_constraints(solver2, variables2)
+    if rsd_thresholds:
+        solver2.Add(solver2.Sum(shutdown_vars2.values()) <= K)
+    solver2.Minimize(
+        solver2.Sum(variables2[idx] * rows[idx][3] for idx in range(len(rows)))
+    )
+    status2 = solver2.Solve()
+
+    if status2 not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
+        return infeasible_response()
+
+    solved_status = "Optimal" if status2 == pywraplp.Solver.OPTIMAL else "Feasible"
+
+    optimized_rakes_by_idx = {idx: variables2[idx].solution_value() for idx in range(len(rows))}
     weighted_vc_after = _weighted_vc([(optimized_rakes_by_idx[i], rows[i][3]) for i in range(len(rows))])
 
     allocations = []
@@ -232,16 +262,23 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
         delta_vc = (opt_vc - cur_vc) if (cur_vc is not None and opt_vc is not None) else None
 
         threshold = rsd_thresholds.get(plant)
-        if threshold is not None and opt_vc is not None:
-            exceeded = opt_vc > threshold + 1e-6
-            margin = opt_vc - threshold
-        else:
+        if threshold is None:
             exceeded = False
             margin = None
+            rsd_status = "no_constraint"
+        elif opt_vc is not None and opt_vc > threshold + 1e-6:
+            exceeded = True
+            margin = opt_vc - threshold
+            rsd_status = "rsd"
+        else:
+            exceeded = False
+            margin = (opt_vc - threshold) if opt_vc is not None else None
+            rsd_status = "safe"
 
         plants_result.append(PlantVCResult(
             plant=plant,
             rsd_threshold_vc=threshold,
+            rsd_status=rsd_status,
             current_rakes=cur_total, optimized_rakes=opt_total,
             current_vc=round(cur_vc, 6) if cur_vc is not None else None,
             optimized_vc=round(opt_vc, 6) if opt_vc is not None else None,
@@ -284,10 +321,11 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
         plant_vc = _weighted_vc([(optimized_rakes_by_idx[i], rows[i][3]) for i in idxs])
         if plant_vc is None:
             ok = True
-            detail = "no rakes allocated (constraint trivially satisfied)"
+            detail = "no rakes allocated (no RSD state)"
         else:
             ok = plant_vc <= threshold + 1e-6
-            detail = f"{plant_vc:.4f} <= {threshold:.4f}"
+            op = "<=" if ok else ">"
+            detail = f"{plant_vc:.4f} {op} {threshold:.4f}"
         constraint_status.append(ConstraintStatusEntry(
             name=f"RSD threshold: {plant_name}",
             satisfied=ok,

@@ -117,15 +117,21 @@ that sees all plants and all companies together in one model.
    stays within the caller-supplied `[minRakes, maxRakes]`.
 4. **Global total conservation** — implied automatically by (1).
 5. **Integer allocation** — all decision variables are `IntVar`.
-6. **RSD threshold (VC) constraint (hard)** — for each plant with a
-   configured `rsd_threshold_vc`, the plant's optimized rake-weighted VC
-   must satisfy `Optimized VC <= RSD Threshold`. Linearized as
-   `sum(x_i * (vc_i - threshold)) <= 0` (equivalent to the weighted-average
-   bound whenever the plant's total rakes > 0; trivially satisfied at zero
-   rakes). Plants with a null/empty threshold have no RSD constraint.
-   Thresholds are hard bounds — a portfolio that cannot keep every
-   thresholded plant at or below its threshold is returned as
-   `status: "Infeasible"` (no shutdown minimization is performed).
+6. **RSD shutdown minimization (lexicographic)** — a plant with a
+   configured `rsd_threshold_vc` is *in RSD* when its optimized
+   rake-weighted VC exceeds its threshold; plants without a threshold are
+   never counted. Thresholds are soft, solved in two stages:
+   - **Stage A (minimize RSD count):** a binary `shutdown[p]` per
+     thresholded plant with a Big-M constraint
+     `sum(x_i*(vc_i - threshold)) <= M_p * shutdown[p]`; minimize
+     `sum(shutdown[p])` and record the minimum count `K`.
+   - **Stage B (optimize cost):** re-solve the model to minimize the
+     portfolio's total variable cost, subject to
+     `sum(shutdown[p]) <= K` to lock in the minimal RSD count.
+   Each plant's response row reports `rsd_status` (`safe` | `rsd` |
+   `no_constraint`), `exceeded_threshold`, `threshold_margin` and the
+   configured `rsd_threshold_vc`; `total_shutdowns` reports the number of
+   RSD plants in the final allocation.
 
 **Failure behavior (already correct, pre-Module-1):** there is **no
 fallback logic of any kind** in this file. If the solver can't create

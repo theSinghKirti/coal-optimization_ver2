@@ -1272,15 +1272,24 @@ function renderServerOptimizeResult(result){
     const thresholdVal = (respThreshold !== null && respThreshold !== undefined)
       ? respThreshold.toFixed(4)
       : (statePlant && statePlant.rsd_threshold !== null && statePlant.rsd_threshold !== undefined ? statePlant.rsd_threshold.toFixed(4) : '&mdash;');
-    const badge = p.exceeded_threshold ? ` <span class="badge bad" style="margin-left:4px; font-size:10px; padding:2px 6px;">Exceeded</span>` : '';
+    // RSD status: "safe" (within threshold), "rsd" (exceeds), "no_constraint".
+    // Falls back to deriving from the legacy fields for older backends.
+    const rsdStatus = p.rsd_status || (p.rsd_threshold_vc === null || p.rsd_threshold_vc === undefined
+      ? 'no_constraint' : (p.exceeded_threshold ? 'rsd' : 'safe'));
+    const rsdBadge = rsdStatus === 'rsd'
+      ? '<span class="badge bad" title="Optimized VC exceeds this plant\'s RSD threshold">RSD</span>'
+      : (rsdStatus === 'safe'
+        ? '<span class="badge ok" title="Optimized VC is within this plant\'s RSD threshold">Safe</span>'
+        : '<span class="badge na" title="No RSD threshold configured">No Constraint</span>');
     return `
     <tr>
       <td>${p.plant}</td>
       <td class="readonly">${fmt1(p.current_rakes)}</td>
       <td class="readonly">${fmt1(p.optimized_rakes)}</td>
       <td class="readonly">${p.current_vc!==null?p.current_vc.toFixed(4):'&mdash;'}</td>
-      <td class="readonly">${p.optimized_vc!==null?p.optimized_vc.toFixed(4):'&mdash;'}${badge}</td>
+      <td class="readonly">${p.optimized_vc!==null?p.optimized_vc.toFixed(4):'&mdash;'}</td>
       <td class="readonly">${thresholdVal}</td>
+      <td>${rsdBadge}</td>
       <td class="readonly" style="color:${p.delta_vc!==null&&p.delta_vc<=0?'var(--green)':'var(--rust)'}">${p.delta_vc!==null?(p.delta_vc>0?'+':'')+p.delta_vc.toFixed(4):'&mdash;'}</td>
     </tr>`;
   }).join('');
@@ -1312,16 +1321,21 @@ function renderServerOptimizeResult(result){
       <div><div class="kpi-label">VC Improvement</div><div class="kpi-value" style="font-size:20px;color:${improvement>=0?'var(--green)':'var(--rust)'}">${improvement>=0?'-':'+'}&#8377;${Math.abs(improvement).toFixed(4)}</div></div>
     </div>
 
-    <div style="margin-top:12px; font-weight:600; font-size:13.5px; color:var(--navy); display:flex; align-items:center; gap:8px;">
-      <span>Shutdowns (plants exceeding RSD threshold):</span>
+    <div style="margin-top:12px; font-weight:600; font-size:13.5px; color:var(--navy); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <span>RSD / shutdown plants:</span>
       <span class="badge ${shutdownsBadgeClass}">${result.total_shutdowns} of ${thresholdCount}</span>
-      <span style="color:var(--steel); font-weight:400; font-size:12px;">(target/ideal: 0)</span>
+      <span style="color:var(--steel); font-weight:400; font-size:12px;">(count is minimized first; plants without a threshold are never counted)</span>
+    </div>
+    <div style="margin-top:8px; font-size:12px; color:var(--steel); display:flex; gap:14px;">
+      <span><span class="badge ok">Safe</span> within threshold</span>
+      <span><span class="badge bad">RSD</span> exceeds threshold</span>
+      <span><span class="badge na">No Constraint</span> no threshold set</span>
     </div>
 
     <div class="section-label" style="margin-top:18px;">Plant-wise VC (before / after diversion)</div>
     <div class="tbl-wrap">
       <table class="src">
-        <thead><tr><th>Plant</th><th>Current Rakes</th><th>Optimized Rakes</th><th>Current VC</th><th>VC After Diversion</th><th>RSD Threshold</th><th>Difference in VC</th></tr></thead>
+        <thead><tr><th>Plant</th><th>Current Rakes</th><th>Optimized Rakes</th><th>Current VC</th><th>VC After Diversion</th><th>RSD Threshold</th><th>RSD Status</th><th>Difference in VC</th></tr></thead>
         <tbody>${plantRows}</tbody>
       </table>
     </div>
