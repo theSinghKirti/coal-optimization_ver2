@@ -73,14 +73,14 @@ def test_non_finite_rsd_threshold_vc_is_rejected(bad):
 
 
 def test_legacy_key_works_end_to_end_via_api():
-    payload = {"plants": [_plant(rsd_threshold=4.12)]}
+    payload = {"plants": [_plant(rsd_threshold=5.0)]}
     resp = client.post("/optimize", json=payload)
     assert resp.status_code == 200
     assert resp.json()["status"] in ("Optimal", "Feasible")
 
 
 def test_new_key_works_end_to_end_via_api():
-    payload = {"plants": [_plant(rsd_threshold_vc=4.12)]}
+    payload = {"plants": [_plant(rsd_threshold_vc=5.0)]}
     resp = client.post("/optimize", json=payload)
     assert resp.status_code == 200
     assert resp.json()["status"] in ("Optimal", "Feasible")

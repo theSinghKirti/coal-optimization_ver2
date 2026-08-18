@@ -1254,7 +1254,7 @@ function buildOptimizePayload(){
   return {
     plants: state.map(p => ({
       plant: p.name,
-      rsd_threshold: p.rsd_threshold,
+      rsd_threshold_vc: p.rsd_threshold,
       sources: p.sources.map(s => ({
         company: s.name,
         current_rakes: Math.round((s.currentRakes||0) * 10) / 10,
@@ -1297,7 +1297,12 @@ function renderServerOptimizeResult(result){
 
   const plantRows = (result.plants||[]).map(p => {
     const statePlant = state.find(pl => pl.name === p.plant);
-    const thresholdVal = statePlant && statePlant.rsd_threshold !== null && statePlant.rsd_threshold !== undefined ? statePlant.rsd_threshold.toFixed(4) : '&mdash;';
+    // Prefer the threshold echoed by the backend (single source of truth for
+    // the solved result); fall back to the frontend state for older backends.
+    const respThreshold = p.rsd_threshold_vc;
+    const thresholdVal = (respThreshold !== null && respThreshold !== undefined)
+      ? respThreshold.toFixed(4)
+      : (statePlant && statePlant.rsd_threshold !== null && statePlant.rsd_threshold !== undefined ? statePlant.rsd_threshold.toFixed(4) : '&mdash;');
     const badge = p.exceeded_threshold ? ` <span class="badge bad" style="margin-left:4px; font-size:10px; padding:2px 6px;">Exceeded</span>` : '';
     return `
     <tr>

@@ -108,7 +108,7 @@ per request with Google OR-Tools (SCIP). One integer decision variable per
 **Scope:** The entire portfolio at once — this is the only implementation
 that sees all plants and all companies together in one model.
 
-**Constraints applied (all 5, exactly, nothing hardcoded):**
+**Constraints applied (all 6, exactly, nothing hardcoded):**
 1. **Company conservation** — each coal company's total rakes across *all*
    plants combined must equal exactly its current total.
 2. **Plant total bound** — each plant's total stays within
@@ -117,9 +117,15 @@ that sees all plants and all companies together in one model.
    stays within the caller-supplied `[minRakes, maxRakes]`.
 4. **Global total conservation** — implied automatically by (1).
 5. **Integer allocation** — all decision variables are `IntVar`.
-6. **Optional RSD Threshold (VC) (Lexicographic Solve)** — For plants with a threshold set, the optimizer minimizes the number of plants that exceed their threshold (*shutdowns*) in a two-stage lexicographic process, rather than treating them as hard bounds that could make the entire solve infeasible:
-   - **Stage A (Minimize shutdowns):** Introduce a binary variable `shutdown[p]` for each plant $p$ with a threshold. Setup a Big-M constraint: `BlendedVC[p] <= threshold[p] + M * shutdown[p]`. Minimize `sum(shutdown[p])` and record the minimum achieved shutdown count `K`.
-   - **Stage B (Optimize cost):** Re-solve the model to minimize the portfolio's total variable cost, subject to the additional constraint `sum(shutdown[p]) <= K` to lock in the minimal shutdown count.
+6. **RSD threshold (VC) constraint (hard)** — for each plant with a
+   configured `rsd_threshold_vc`, the plant's optimized rake-weighted VC
+   must satisfy `Optimized VC <= RSD Threshold`. Linearized as
+   `sum(x_i * (vc_i - threshold)) <= 0` (equivalent to the weighted-average
+   bound whenever the plant's total rakes > 0; trivially satisfied at zero
+   rakes). Plants with a null/empty threshold have no RSD constraint.
+   Thresholds are hard bounds — a portfolio that cannot keep every
+   thresholded plant at or below its threshold is returned as
+   `status: "Infeasible"` (no shutdown minimization is performed).
 
 **Failure behavior (already correct, pre-Module-1):** there is **no
 fallback logic of any kind** in this file. If the solver can't create

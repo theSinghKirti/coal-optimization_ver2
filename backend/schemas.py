@@ -94,6 +94,7 @@ class AllocationResult(BaseModel):
 
 class PlantVCResult(BaseModel):
     plant: str
+    rsd_threshold_vc: Optional[float] = None  # configured RSD/VC threshold (None = no RSD constraint)
     current_rakes: float
     optimized_rakes: float
     current_vc: Optional[float] = None    # rake-weighted, using CURRENT rakes
