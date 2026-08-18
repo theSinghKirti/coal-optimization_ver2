@@ -127,7 +127,8 @@ that sees all plants and all companies together in one model.
      `sum(shutdown[p])` and record the minimum count `K`.
    - **Stage B (optimize cost):** re-solve the model to minimize the
      portfolio's total variable cost, subject to
-     `sum(shutdown[p]) <= K` to lock in the minimal RSD count.
+     `sum(shutdown[p]) == K` to lock in the minimal RSD count (equivalent
+     to `<= K`, since `K` is the minimum achievable sum).
    Each plant's response row reports `rsd_status` (`safe` | `rsd` |
    `no_constraint`), `exceeded_threshold`, `threshold_margin` and the
    configured `rsd_threshold_vc`; `total_shutdowns` reports the number of

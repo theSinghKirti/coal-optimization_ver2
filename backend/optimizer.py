@@ -222,13 +222,15 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
             return infeasible_response()
         K = int(round(sum(v.solution_value() for v in shutdown_vars1.values())))
 
-    # Stage 2: minimize total weighted VC with the minimum RSD count locked in
+    # Stage 2: minimize total weighted VC with the minimum RSD count locked in.
+    # "== K" fixes the minimum count found in Stage 1 (equivalent to "<= K"
+    # because K is the minimum achievable sum, but states the intent exactly).
     solver2, variables2 = build_solver_with_core_constraints()
     if solver2 is None:
         return OptimizeResponse(status="Infeasible", message="Could not create SCIP solver")
     shutdown_vars2 = add_rsd_shutdown_constraints(solver2, variables2)
-    if rsd_thresholds:
-        solver2.Add(solver2.Sum(shutdown_vars2.values()) <= K)
+    if shutdown_vars2:
+        solver2.Add(solver2.Sum(shutdown_vars2.values()) == K)
     solver2.Minimize(
         solver2.Sum(variables2[idx] * rows[idx][3] for idx in range(len(rows)))
     )
