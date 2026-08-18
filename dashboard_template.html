@@ -276,7 +276,7 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
       <div class="target-box">
         <div>
           <label>Target ceiling</label>
-          <div class="target-input-wrap"><span>&#8377;</span><input type="number" step="0.01" id="globalTarget" class="target-num" value="4.00"><span>/unit</span></div>
+          <div class="target-input-wrap"><span>&#8377;</span><input type="number" step="0.0001" id="globalTarget" class="target-num" value="4.0000"><span>/unit</span></div>
         </div>
       </div>
       <button class="btn btn-gold" id="optimizeAllBtn" title="Client-side estimate only - does not enforce company-wide conservation across plants">Preview All Plant Mixes</button>
@@ -724,6 +724,7 @@ function buildState(){
     // sentinel source name since it belongs to the plant, not a source.
     const plantOv = overrides[p.name + '||__plant__'] || {};
     const linkageType = plantOv.linkageType !== undefined ? plantOv.linkageType : p.linkageType;
+    const rsd_threshold = plantOv.rsd_threshold !== undefined ? plantOv.rsd_threshold : null;
 
     const n = raw.length;
     const sources = raw.map(s=>{
@@ -737,7 +738,7 @@ function buildState(){
       // the optimizer. It defaults to the Rate/Freight/SCC/APC formula value
       // as a sensible starting point, but is fully editable and independent
       // of that formula from then on (per task spec's 3-way VC distinction).
-      const currentVC = ov.currentVC!==undefined ? ov.currentVC : (Math.round(unitVC(s)*100)/100);
+      const currentVC = ov.currentVC!==undefined ? ov.currentVC : (Math.round(unitVC(s)*10000)/10000);
       // Premium is editable the same way as Rate/Freight/SCC/APC. It is NOT
       // part of the landedCost()/unitVC() formula (see footer "Method" note:
       // it's contractual context on bridge-linkage rates, not separately
@@ -756,6 +757,7 @@ function buildState(){
       basis, totalRakes: 0, // recomputed by recomputeAllShares()
       flexBand: 20,
       sources,
+      rsd_threshold,
       lastOptimized:null
     };
   });
@@ -883,18 +885,70 @@ function flashButton(id, successText, failText, ok){
 }
 
 // ---------- formatting ----------
-const fmt2 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(2);
+const fmt2 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(4);
 const fmt1 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(1);
 const fmt0 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : Math.round(n);
 
 // ---------- render ----------
 function render(){
+  // Save focus
+  const activeEl = document.activeElement;
+  let activeId = null;
+  let activeSrc = null;
+  let activeField = null;
+  let selectionStart = null;
+  let selectionEnd = null;
+
+  if (activeEl) {
+    activeId = activeEl.id;
+    if (activeEl.dataset && activeEl.dataset.field) {
+      activeField = activeEl.dataset.field;
+      const tr = activeEl.closest('tr');
+      if (tr) {
+        activeSrc = tr.dataset.src;
+      }
+    }
+    // Only text/number inputs support selection properties
+    if (activeEl.tagName === 'INPUT' && (activeEl.type === 'text' || activeEl.type === 'number')) {
+      try {
+        selectionStart = activeEl.selectionStart;
+        selectionEnd = activeEl.selectionEnd;
+      } catch(e) {}
+    }
+  }
+
   recomputeAllShares();
   renderKPI();
   renderTabs();
   renderPanel();
   renderPortfolioRakeTable(); // FEATURE 3 - redraws from lastOfficialResult (or the empty state); never clears it by itself
   renderOptimizationSummary(); // FEATURE 4 - same source of truth, same rule: redraws only, never clears
+
+  // Restore focus
+  if (activeId) {
+    const el = document.getElementById(activeId);
+    if (el) {
+      el.focus();
+      try {
+        if (selectionStart !== null) {
+          el.setSelectionRange(selectionStart, selectionEnd);
+        }
+      } catch(e) {}
+    }
+  } else if (activeSrc && activeField) {
+    const tr = document.querySelector(`tr[data-src="${activeSrc}"]`);
+    if (tr) {
+      const el = tr.querySelector(`input[data-field="${activeField}"]`);
+      if (el) {
+        el.focus();
+        try {
+          if (selectionStart !== null) {
+            el.setSelectionRange(selectionStart, selectionEnd);
+          }
+        } catch(e) {}
+      }
+    }
+  }
 }
 
 // The "optimized"/"preview" figures in this KPI strip come from the
@@ -990,7 +1044,7 @@ function renderPanel(){
       <td><input class="cell-input" type="number" step="0.01" data-field="scc" value="${s.scc}"></td>
       <td><input class="cell-input" type="number" step="0.1" data-field="apc" value="${s.apc}"></td>
       <td class="readonly" title="Computed from Rate/Freight/SCC/APC - a reference starting point only, not used by the optimizer">${fmt2(formulaVC)}</td>
-      <td class="vc-cell ${curVcClass}"><input class="cell-input" type="number" step="0.01" min="0.01" data-field="currentVC" value="${s.currentVC}"></td>
+      <td class="vc-cell ${curVcClass}"><input class="cell-input" type="number" step="0.0001" min="0.0001" data-field="currentVC" value="${s.currentVC !== null && s.currentVC !== undefined ? s.currentVC.toFixed(4) : ''}"></td>
       <td title="${fmt1(s.currentShare*100)}% of plant total"><input class="cell-input" type="number" step="1" min="0" data-field="currentRakes" value="${s.currentRakes}"></td>
       <td><input class="cell-input range" type="number" step="1" min="0" max="100" data-field="minShare" value="${s.minShare}">%</td>
       <td><input class="cell-input range" type="number" step="1" min="0" max="100" data-field="maxShare" value="${s.maxShare}">%</td>
@@ -1013,6 +1067,10 @@ function renderPanel(){
           ${baseline!==null&&baseline!==undefined?`<div style="font-size:11px;color:var(--steel);margin-top:3px;">Excel-reported baseline VC: &#8377;${fmt2(baseline)}</div>`:''}
         </div>
         <div class="panel-actions">
+          <label style="font-size:11px;color:var(--steel);display:flex;align-items:center;gap:6px;">
+            RSD Threshold (VC)
+            <input class="cell-input" style="width:75px" type="number" step="0.0001" min="0" id="rsdThresholdInput" value="${plant.rsd_threshold !== undefined && plant.rsd_threshold !== null ? plant.rsd_threshold.toFixed(4) : ''}" placeholder="None">
+          </label>
           <label style="font-size:11px;color:var(--steel);display:flex;align-items:center;gap:6px;">
             Total current rakes
             <input class="cell-input" style="width:56px" type="number" step="0.1" id="totalRakesInput" value="${plant.totalRakes}" readonly title="Computed automatically as the sum of each source's Current Rakes">
@@ -1084,6 +1142,13 @@ function renderPanel(){
     plant.linkageType = val;
     saveOverride(plant.name, '__plant__', 'linkageType', val);
     invalidateOfficialResult(); // FEATURE 3/4: displayed operational info changed - clear the stale official table + summary
+    render();
+  });
+  document.getElementById('rsdThresholdInput').addEventListener('input', e=>{
+    const val = e.target.value === '' ? null : parseFloat(e.target.value);
+    plant.rsd_threshold = val;
+    saveOverride(plant.name, '__plant__', 'rsd_threshold', val);
+    invalidateOfficialResult();
     render();
   });
   // PREVIEW ONLY - see applyOptimizedToPlant() comment above.
@@ -1161,8 +1226,8 @@ document.getElementById('resetAllBtn').addEventListener('click', ()=>{
   recomputeAllShares();
   state.forEach(applyFlexBand);
   activeIdx = 0;
-  document.getElementById('globalTarget').value = '4.00';
-  globalTarget = 4.00;
+  document.getElementById('globalTarget').value = '4.0000';
+  globalTarget = 4.0000;
   invalidateOfficialResult(); // FEATURE 3/4: inputs reverted to source data - the official table/summary no longer reflect them
   render();
 });
@@ -1189,6 +1254,7 @@ function buildOptimizePayload(){
   return {
     plants: state.map(p => ({
       plant: p.name,
+      rsd_threshold: p.rsd_threshold,
       sources: p.sources.map(s => ({
         company: s.name,
         current_rakes: Math.round((s.currentRakes||0) * 10) / 10,
@@ -1229,15 +1295,21 @@ function renderServerOptimizeResult(result){
   const after = result.weighted_vc_after;
   const improvement = result.vc_improvement!==null&&result.vc_improvement!==undefined ? result.vc_improvement : (before - after);
 
-  const plantRows = (result.plants||[]).map(p => `
+  const plantRows = (result.plants||[]).map(p => {
+    const statePlant = state.find(pl => pl.name === p.plant);
+    const thresholdVal = statePlant && statePlant.rsd_threshold !== null && statePlant.rsd_threshold !== undefined ? statePlant.rsd_threshold.toFixed(4) : '&mdash;';
+    const badge = p.exceeded_threshold ? ` <span class="badge bad" style="margin-left:4px; font-size:10px; padding:2px 6px;">Exceeded</span>` : '';
+    return `
     <tr>
       <td>${p.plant}</td>
       <td class="readonly">${fmt1(p.current_rakes)}</td>
       <td class="readonly">${fmt1(p.optimized_rakes)}</td>
       <td class="readonly">${p.current_vc!==null?p.current_vc.toFixed(4):'&mdash;'}</td>
-      <td class="readonly">${p.optimized_vc!==null?p.optimized_vc.toFixed(4):'&mdash;'}</td>
+      <td class="readonly">${p.optimized_vc!==null?p.optimized_vc.toFixed(4):'&mdash;'}${badge}</td>
+      <td class="readonly">${thresholdVal}</td>
       <td class="readonly" style="color:${p.delta_vc!==null&&p.delta_vc<=0?'var(--green)':'var(--rust)'}">${p.delta_vc!==null?(p.delta_vc>0?'+':'')+p.delta_vc.toFixed(4):'&mdash;'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   const allocationRows = (result.allocations||[]).map(a => `
     <tr>
@@ -1255,6 +1327,9 @@ function renderServerOptimizeResult(result){
       <span class="readonly" style="font-family:'IBM Plex Mono',monospace;color:var(--steel);">${c.detail}</span>
     </div>`).join('');
 
+  const thresholdCount = state.filter(pl => pl.rsd_threshold !== null && pl.rsd_threshold !== undefined).length;
+  const shutdownsBadgeClass = result.total_shutdowns > 0 ? 'bad' : 'ok';
+
   body.innerHTML = `
     <div class="result-strip" style="margin-top:10px;">
       <div><div class="kpi-label">Weighted Avg VC &mdash; Current</div><div class="kpi-value" style="font-size:20px">${before!==null?'&#8377;'+before.toFixed(4):'&mdash;'}</div></div>
@@ -1263,10 +1338,16 @@ function renderServerOptimizeResult(result){
       <div><div class="kpi-label">VC Improvement</div><div class="kpi-value" style="font-size:20px;color:${improvement>=0?'var(--green)':'var(--rust)'}">${improvement>=0?'-':'+'}&#8377;${Math.abs(improvement).toFixed(4)}</div></div>
     </div>
 
+    <div style="margin-top:12px; font-weight:600; font-size:13.5px; color:var(--navy); display:flex; align-items:center; gap:8px;">
+      <span>Shutdowns (plants exceeding RSD threshold):</span>
+      <span class="badge ${shutdownsBadgeClass}">${result.total_shutdowns} of ${thresholdCount}</span>
+      <span style="color:var(--steel); font-weight:400; font-size:12px;">(target/ideal: 0)</span>
+    </div>
+
     <div class="section-label" style="margin-top:18px;">Plant-wise VC (before / after diversion)</div>
     <div class="tbl-wrap">
       <table class="src">
-        <thead><tr><th>Plant</th><th>Current Rakes</th><th>Optimized Rakes</th><th>Current VC</th><th>VC After Diversion</th><th>Difference in VC</th></tr></thead>
+        <thead><tr><th>Plant</th><th>Current Rakes</th><th>Optimized Rakes</th><th>Current VC</th><th>VC After Diversion</th><th>RSD Threshold</th><th>Difference in VC</th></tr></thead>
         <tbody>${plantRows}</tbody>
       </table>
     </div>

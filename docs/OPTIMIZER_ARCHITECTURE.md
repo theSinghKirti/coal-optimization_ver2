@@ -117,6 +117,9 @@ that sees all plants and all companies together in one model.
    stays within the caller-supplied `[minRakes, maxRakes]`.
 4. **Global total conservation** — implied automatically by (1).
 5. **Integer allocation** — all decision variables are `IntVar`.
+6. **Optional RSD Threshold (VC) (Lexicographic Solve)** — For plants with a threshold set, the optimizer minimizes the number of plants that exceed their threshold (*shutdowns*) in a two-stage lexicographic process, rather than treating them as hard bounds that could make the entire solve infeasible:
+   - **Stage A (Minimize shutdowns):** Introduce a binary variable `shutdown[p]` for each plant $p$ with a threshold. Setup a Big-M constraint: `BlendedVC[p] <= threshold[p] + M * shutdown[p]`. Minimize `sum(shutdown[p])` and record the minimum achieved shutdown count `K`.
+   - **Stage B (Optimize cost):** Re-solve the model to minimize the portfolio's total variable cost, subject to the additional constraint `sum(shutdown[p]) <= K` to lock in the minimal shutdown count.
 
 **Failure behavior (already correct, pre-Module-1):** there is **no
 fallback logic of any kind** in this file. If the solver can't create

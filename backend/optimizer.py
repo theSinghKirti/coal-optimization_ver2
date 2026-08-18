@@ -115,54 +115,120 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
     for plant, company, current_rakes, vc, minR, maxR in rows:
         plant_totals[plant] += current_rakes
 
-    # ---- Build the OR-Tools model
-    solver = pywraplp.Solver.CreateSolver("SCIP")
-    if solver is None:
-        return OptimizeResponse(status="Infeasible", message="Could not create SCIP solver")
-
-    # One integer variable per (plant, company) row, bounded by the
-    # supplied minRakes/maxRakes (plant-company constraint).
-    variables = {}
-    for idx, (plant, company, current_rakes, vc, minR, maxR) in enumerate(rows):
-        lb = int(round(minR))
-        ub = int(round(maxR))
-        if ub < lb:
-            ub = lb  # degenerate but keep solver well-defined
-        var = solver.IntVar(lb, ub, f"x_{idx}_{plant}_{company}")
-        variables[idx] = var
-
-    # Constraint 1: company conservation - exact total per company
-    by_company: Dict[str, List[int]] = defaultdict(list)
-    for idx, (plant, company, current_rakes, vc, minR, maxR) in enumerate(rows):
-        by_company[company].append(idx)
-
-    for company, idxs in by_company.items():
-        solver.Add(
-            solver.Sum(variables[i] for i in idxs) == int(round(company_totals[company]))
-        )
-
-    # Constraint 2: plant total within [plantMinPct, plantMaxPct] of current
     by_plant: Dict[str, List[int]] = defaultdict(list)
     for idx, (plant, company, current_rakes, vc, minR, maxR) in enumerate(rows):
         by_plant[plant].append(idx)
 
-    for plant, idxs in by_plant.items():
-        current_total = plant_totals[plant]
-        lower = int(round(current_total * request.plantMinPct))
-        upper = int(round(current_total * request.plantMaxPct))
-        plant_sum = solver.Sum(variables[i] for i in idxs)
-        solver.Add(plant_sum >= lower)
-        solver.Add(plant_sum <= upper)
+    by_company: Dict[str, List[int]] = defaultdict(list)
+    for idx, (plant, company, current_rakes, vc, minR, maxR) in enumerate(rows):
+        by_company[company].append(idx)
 
-    # Objective: minimize total weighted variable cost, using the caller's
-    # manually-entered current_vc as the fixed per-source cost coefficient.
-    solver.Minimize(
-        solver.Sum(variables[idx] * rows[idx][3] for idx in range(len(rows)))
+    # Extract threshold dictionary
+    rsd_thresholds = {p.plant: p.rsd_threshold for p in request.plants if p.rsd_threshold is not None}
+
+    # Helper function to build base solver and add core constraints
+    def build_solver_with_core_constraints() -> Tuple["pywraplp.Solver", Dict[int, "pywraplp.Variable"]]:
+        solver = pywraplp.Solver.CreateSolver("SCIP")
+        if solver is None:
+            return None, {}
+
+        variables = {}
+        for idx, (plant, company, current_rakes, vc, minR, maxR) in enumerate(rows):
+            lb = int(round(minR))
+            ub = int(round(maxR))
+            if ub < lb:
+                ub = lb  # degenerate but keep solver well-defined
+            var = solver.IntVar(lb, ub, f"x_{idx}_{plant}_{company}")
+            variables[idx] = var
+
+        # Constraint 1: company conservation
+        for company, idxs in by_company.items():
+            solver.Add(
+                solver.Sum(variables[i] for i in idxs) == int(round(company_totals[company]))
+            )
+
+        # Constraint 2: plant total within [plantMinPct, plantMaxPct]
+        for plant, idxs in by_plant.items():
+            current_total = plant_totals[plant]
+            lower = int(round(current_total * request.plantMinPct))
+            upper = int(round(current_total * request.plantMaxPct))
+            plant_sum = solver.Sum(variables[i] for i in idxs)
+            solver.Add(plant_sum >= lower)
+            solver.Add(plant_sum <= upper)
+
+        return solver, variables
+
+    # Stage 1: Minimize shutdown count
+    K = 0
+    if rsd_thresholds:
+        solver1, variables1 = build_solver_with_core_constraints()
+        if solver1 is None:
+            return OptimizeResponse(status="Infeasible", message="Could not create SCIP solver")
+
+        exceeds_vars1 = {}
+        for plant_name, threshold in rsd_thresholds.items():
+            if plant_name in by_plant:
+                idxs = by_plant[plant_name]
+                exceeds_p = solver1.IntVar(0, 1, f"exceeds_{plant_name}")
+                exceeds_vars1[plant_name] = exceeds_p
+
+                # Big-M constraint setup
+                MaxRakes_p = int(round(plant_totals[plant_name] * request.plantMaxPct))
+                max_vc_p = max(rows[i][3] for i in idxs)
+                M_p = max(1.0, MaxRakes_p * max_vc_p)
+
+                solver1.Add(
+                    solver1.Sum(variables1[i] * (rows[i][3] - threshold) for i in idxs) <= M_p * exceeds_p
+                )
+
+        solver1.Minimize(solver1.Sum(exceeds_vars1.values()))
+        status1 = solver1.Solve()
+
+        if status1 not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
+            return OptimizeResponse(
+                status="Infeasible",
+                weighted_vc_before=round(weighted_vc_before, 6) if weighted_vc_before is not None else None,
+                message=(
+                    "No feasible allocation satisfies company conservation, "
+                    "plant-total bounds, and plant-company bounds simultaneously."
+                ),
+            )
+
+        K = int(round(sum(var.solution_value() for var in exceeds_vars1.values())))
+
+    # Stage 2: Re-optimize VC given fixed shutdown count K
+    solver2, variables2 = build_solver_with_core_constraints()
+    if solver2 is None:
+        return OptimizeResponse(status="Infeasible", message="Could not create SCIP solver")
+
+    exceeds_vars2 = {}
+    if rsd_thresholds:
+        for plant_name, threshold in rsd_thresholds.items():
+            if plant_name in by_plant:
+                idxs = by_plant[plant_name]
+                exceeds_p = solver2.IntVar(0, 1, f"exceeds_{plant_name}_stage2")
+                exceeds_vars2[plant_name] = exceeds_p
+
+                # Big-M constraint setup
+                MaxRakes_p = int(round(plant_totals[plant_name] * request.plantMaxPct))
+                max_vc_p = max(rows[i][3] for i in idxs)
+                M_p = max(1.0, MaxRakes_p * max_vc_p)
+
+                solver2.Add(
+                    solver2.Sum(variables2[i] * (rows[i][3] - threshold) for i in idxs) <= M_p * exceeds_p
+                )
+
+        # Enforce shutdown limit K from Stage 1
+        solver2.Add(solver2.Sum(exceeds_vars2.values()) <= K)
+
+    # Objective: minimize total weighted variable cost
+    solver2.Minimize(
+        solver2.Sum(variables2[idx] * rows[idx][3] for idx in range(len(rows)))
     )
 
-    status = solver.Solve()
+    status2 = solver2.Solve()
 
-    if status not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
+    if status2 not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
         return OptimizeResponse(
             status="Infeasible",
             weighted_vc_before=round(weighted_vc_before, 6) if weighted_vc_before is not None else None,
@@ -172,9 +238,9 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
             ),
         )
 
-    solved_status = "Optimal" if status == pywraplp.Solver.OPTIMAL else "Feasible"
+    solved_status = "Optimal" if status2 == pywraplp.Solver.OPTIMAL else "Feasible"
 
-    optimized_rakes_by_idx = {idx: variables[idx].solution_value() for idx in range(len(rows))}
+    optimized_rakes_by_idx = {idx: variables2[idx].solution_value() for idx in range(len(rows))}
     weighted_vc_after = _weighted_vc([(optimized_rakes_by_idx[i], rows[i][3]) for i in range(len(rows))])
 
     allocations = []
@@ -187,8 +253,7 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
             minRakes=minR, maxRakes=maxR,
         ))
 
-    # ---- Plant-level current VC / optimized VC / delta (rake-weighted,
-    # source_vc unchanged - only the rake mix changes)
+    # ---- Plant-level results
     plants_result: List[PlantVCResult] = []
     for plant, idxs in by_plant.items():
         cur_total = sum(rows[i][2] for i in idxs)
@@ -196,13 +261,27 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
         cur_vc = _weighted_vc([(rows[i][2], rows[i][3]) for i in idxs])
         opt_vc = _weighted_vc([(optimized_rakes_by_idx[i], rows[i][3]) for i in idxs])
         delta_vc = (opt_vc - cur_vc) if (cur_vc is not None and opt_vc is not None) else None
+
+        threshold = rsd_thresholds.get(plant)
+        if threshold is not None and opt_vc is not None:
+            exceeded = opt_vc > threshold + 1e-6
+            margin = opt_vc - threshold
+        else:
+            exceeded = False
+            margin = None
+
         plants_result.append(PlantVCResult(
             plant=plant,
             current_rakes=cur_total, optimized_rakes=opt_total,
             current_vc=round(cur_vc, 6) if cur_vc is not None else None,
             optimized_vc=round(opt_vc, 6) if opt_vc is not None else None,
             delta_vc=round(delta_vc, 6) if delta_vc is not None else None,
+            exceeded_threshold=exceeded,
+            threshold_margin=round(margin, 6) if margin is not None else None,
         ))
+
+    # Calculate actual shutdowns in the returned solution
+    total_shutdowns = sum(1 for p in plants_result if p.exceeded_threshold)
 
     # ---- Constraint validation report (post-hoc check of the solved values)
     constraint_status = []
@@ -248,4 +327,5 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
         plants=plants_result,
         allocations=allocations,
         constraint_status=constraint_status,
+        total_shutdowns=total_shutdowns,
     )

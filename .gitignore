@@ -2,3 +2,4 @@
 __pycache__/
 *.pyc
 backend/__pycache__/
+.pytest_cache/

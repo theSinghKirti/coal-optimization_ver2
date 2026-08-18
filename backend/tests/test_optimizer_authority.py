@@ -263,3 +263,41 @@ def test_result_depends_only_on_request_body_not_on_prior_calls():
     body2 = resp2.json()
 
     assert body1["weighted_vc_after"] != body2["weighted_vc_after"]
+
+
+def test_rsd_threshold_conflicting_stage1_stage2():
+    payload = {
+        "plants": [
+            {
+                "plant": "PlantA",
+                "rsd_threshold": 4.12,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 10, "current_vc": 4.10, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 0, "current_vc": 4.40, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+            {
+                "plant": "PlantB",
+                "rsd_threshold": 4.12,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 0, "current_vc": 4.05, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 10, "current_vc": 4.20, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+        ]
+    }
+    resp = client.post("/optimize", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["status"] in ("Optimal", "Feasible")
+    assert body["total_shutdowns"] == 1
+
+    plant_a = next(p for p in body["plants"] if p["plant"] == "PlantA")
+    plant_b = next(p for p in body["plants"] if p["plant"] == "PlantB")
+
+    assert not plant_a["exceeded_threshold"]
+    assert plant_b["exceeded_threshold"]
+    assert abs(plant_a["optimized_vc"] - 4.10) < 1e-4
+    assert abs(plant_b["optimized_vc"] - 4.186364) < 1e-4
+    assert abs(body["weighted_vc_after"] - 4.1475) < 1e-4

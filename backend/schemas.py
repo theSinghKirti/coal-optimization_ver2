@@ -2,8 +2,9 @@
 Pydantic schemas for the Coal Rake Diversion Optimizer API.
 """
 
+import math
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class SourceInput(BaseModel):
@@ -24,6 +25,51 @@ class SourceInput(BaseModel):
 class PlantInput(BaseModel):
     plant: str = Field(..., description="Plant name")
     sources: List[SourceInput]
+    rsd_threshold_vc: Optional[float] = Field(
+        None,
+        description=(
+            "Optional RSD threshold (VC) cap. null/empty means no RSD constraint; "
+            "a numeric value caps the plant's rake-weighted VC."
+        ),
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_legacy_rsd_threshold(cls, data):
+        """Backward compatibility: map the legacy 'rsd_threshold' key onto
+        'rsd_threshold_vc' so existing API callers keep working unchanged."""
+        if isinstance(data, dict):
+            legacy = data.get("rsd_threshold")
+            new_value = data.get("rsd_threshold_vc")
+            if isinstance(new_value, str):
+                new_value = new_value.strip() or None
+            if new_value is None and legacy is not None:
+                data["rsd_threshold_vc"] = legacy
+            data.pop("rsd_threshold", None)
+        return data
+
+    @field_validator("rsd_threshold_vc", mode="before")
+    @classmethod
+    def _normalize_rsd_threshold_vc(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            if value == "":
+                return None
+        if value is None:
+            return None
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return value  # let Pydantic raise its usual type error
+        if not math.isfinite(num):
+            raise ValueError("RSD threshold must be a finite number")
+        return value
+
+    @property
+    def rsd_threshold(self) -> Optional[float]:
+        """Backward-compatible read-only access to the RSD/VC threshold under
+        the legacy field name (used by the optimizer until it is migrated)."""
+        return self.rsd_threshold_vc
 
 
 class OptimizeRequest(BaseModel):
@@ -53,6 +99,8 @@ class PlantVCResult(BaseModel):
     current_vc: Optional[float] = None    # rake-weighted, using CURRENT rakes
     optimized_vc: Optional[float] = None  # rake-weighted, using OPTIMIZED rakes
     delta_vc: Optional[float] = None      # optimized_vc - current_vc
+    exceeded_threshold: bool = False
+    threshold_margin: Optional[float] = None
 
 
 class ConstraintStatusEntry(BaseModel):
@@ -78,3 +126,4 @@ class OptimizeResponse(BaseModel):
     constraint_status: List[ConstraintStatusEntry] = []
     errors: List[ValidationErrorEntry] = []
     message: Optional[str] = None
+    total_shutdowns: int = 0
