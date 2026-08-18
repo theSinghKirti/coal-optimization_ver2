@@ -1,0 +1,12 @@
+{
+  "name": "coal-optimizer-frontend-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "jsdom-based tests for the dashboard's RSD threshold and actual-diversion calculator frontend logic",
+  "scripts": {
+    "test": "node --test test-rsd.test.js test-diversion.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

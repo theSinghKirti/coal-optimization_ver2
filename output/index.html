@@ -282,6 +282,7 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
       <button class="btn btn-gold" id="optimizeAllBtn" title="Client-side estimate only - does not enforce company-wide conservation across plants">Preview All Plant Mixes</button>
       <button class="btn btn-ghost" id="resetAllBtn">Reset to source data</button>
       <button class="btn btn-gold" id="serverOptimizeBtn" type="button" title="The only authoritative optimizer - solves the full portfolio with Google OR-Tools on the FastAPI backend">Optimize Allocation (OR-Tools)</button>
+      <button class="btn btn-ghost" id="diversionCalcOpenBtn" type="button" title="Evaluate actual/manual rake diversions - independent of the OR-Tools optimizer">Actual Diversion Calculator</button>
     </div>
   </div>
 </div>
@@ -375,6 +376,30 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
       </div>
     </div>
     <div id="serverOptimizeBody"></div>
+  </div>
+</div>
+
+<!-- ACTUAL DIVERSION CALCULATOR. Independent of /optimize: the operator
+     enters the rakes actually diverted / received per source and the
+     backend (POST /calculate-diversion, backend/diversion.py) returns the
+     resulting plant-wise and overall blended VC as pure weighted averages.
+     The ONLY link to the optimizer result is the "Seed from Optimizer"
+     button, which copies the official optimized allocation into the input
+     column as a suggested starting reference. -->
+<div class="kpi-wrap" id="diversionCalcWrap" style="display:none;">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Actual Diversion Calculator</h2>
+        <div style="font-size:11px;color:var(--steel);margin-top:3px;">Evaluate actual / manual rake diversions &mdash; backend calculates plant-wise and overall blended VC</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-gold" id="diversionCalcSeedBtn" title="Copy the official OR-Tools optimized allocation into the Actual column as a starting reference">Seed from Optimizer suggestion</button>
+        <button class="btn btn-gold" id="diversionCalcBtn" type="button" title="Send the entered actuals to POST /calculate-diversion for plant-wise and overall VC">Calculate Diversion VC</button>
+        <button class="btn btn-ghost" id="diversionCalcCloseBtn">Close</button>
+      </div>
+    </div>
+    <div id="diversionCalcBody"></div>
   </div>
 </div>
 
@@ -1723,6 +1748,256 @@ document.getElementById('serverOptimizeBtn').addEventListener('click', async (ev
 
 document.getElementById('serverOptimizeCloseBtn').addEventListener('click', ()=>{
   document.getElementById('serverOptimizeWrap').style.display = 'none';
+});
+
+// =====================================================================
+// ACTUAL DIVERSION CALCULATOR. Evaluates the ACTUAL/manual rake
+// diversions the operator enters, against the SAME source VCs the
+// optimizer consumes, via POST /calculate-diversion (backend/diversion.py)
+// - pure weighted averages, no solving. Fully independent of the /optimize
+// flow: it reads/writes neither lastOfficialResult nor the preview
+// optimizers; the only link is the "Seed from Optimizer" button, which
+// copies the official optimized_rakes into the input column as a starting
+// reference.
+// =====================================================================
+
+// `${plant}||${source}` -> number entered by the operator (absent = keep
+// the current rakes, i.e. "no diversion for this row").
+const diversionActuals = {};
+
+let lastDiversionResult = null; // raw /calculate-diversion response shown below the input table
+
+function diversionInputKey(plantName, srcName){
+  return plantName + '||' + srcName;
+}
+
+function buildDiversionPayload(){
+  return {
+    plants: state.map(p=>({
+      plant: p.name,
+      sources: p.sources.map(s=>{
+        const entered = diversionActuals[diversionInputKey(p.name, s.name)];
+        const hasEntered = entered!==undefined && entered!==null && !isNaN(entered);
+        return {
+          company: s.name,
+          current_rakes: s.currentRakes,
+          current_vc: s.currentVC,
+          rakes: hasEntered ? entered : s.currentRakes,
+        };
+      })
+    }))
+  };
+}
+
+function renderDiversionResultSection(result){
+  const host = document.getElementById('diversionCalcResults');
+  if(!host) return;
+
+  if(!result){
+    host.innerHTML = '';
+    return;
+  }
+
+  if(result.status === 'validation_error'){
+    const errRows = (result.errors||[]).map(e => `
+      <div style="padding:6px 0;border-top:1px solid var(--line);font-size:12.5px;">
+        <b>${e.plant||''}${e.company ? ' / '+e.company : ''}</b> &mdash; <code class="f">${e.field}</code>: ${e.message}
+      </div>`).join('');
+    host.innerHTML = `
+      <div class="section-label" style="margin-top:18px;">Calculation result</div>
+      <div class="remark-note" style="margin-top:6px;">${result.message || 'The entered diversions could not be evaluated.'}</div>${errRows}`;
+    return;
+  }
+
+  const before = result.weighted_vc_current;
+  const after = result.weighted_vc_actual;
+  const improvement = result.vc_improvement;
+  const impColor = improvement>0 ? 'var(--green)' : (improvement<0 ? 'var(--rust)' : 'var(--steel)');
+  const vcFmt = v => (v===null||v===undefined||isNaN(v)) ? '&mdash;' : ('&#8377;'+v.toFixed(4));
+
+  const plantRows = (result.plants||[]).map(p => `
+    <tr>
+      <td>${p.plant}</td>
+      <td class="readonly">${fmt1(p.current_rakes)}</td>
+      <td class="readonly">${fmt1(p.actual_rakes)}</td>
+      <td class="readonly">${vcFmt(p.current_vc)}</td>
+      <td class="readonly">${vcFmt(p.actual_vc)}</td>
+      <td class="readonly" style="color:${p.delta_vc!==null&&p.delta_vc<=0?'var(--green)':'var(--rust)'}">${p.delta_vc!==null?(p.delta_vc>0?'+':'')+p.delta_vc.toFixed(4):'&mdash;'}</td>
+    </tr>`).join('');
+
+  host.innerHTML = `
+    <div class="section-label" style="margin-top:18px;">Calculation result</div>
+    <div class="result-strip" style="margin-top:10px;">
+      <div><div class="kpi-label">Portfolio Avg VC &mdash; Current Mix</div><div class="kpi-value" style="font-size:20px">${vcFmt(before)}</div></div>
+      <div class="arrow">&#8594;</div>
+      <div><div class="kpi-label">Portfolio Avg VC &mdash; Actual Diversion</div><div class="kpi-value" style="font-size:20px">${vcFmt(after)}</div></div>
+      <div><div class="kpi-label">VC Impact</div><div class="kpi-value" style="font-size:20px;color:${impColor}">${improvement!==null?(improvement>0?'-':'+')+'&#8377;'+Math.abs(improvement).toFixed(4):'&mdash;'}</div></div>
+    </div>
+    <div style="margin-top:8px;font-size:12px;color:var(--steel);">Total rakes: ${fmt1(result.total_rakes_current)} current &rarr; ${fmt1(result.total_rakes_actual)} actual (no conservation enforced &mdash; actuals are what was really moved)</div>
+    <div class="section-label" style="margin-top:18px;">Plant-wise VC (current mix / actual diversion)</div>
+    <div class="tbl-wrap">
+      <table class="src">
+        <thead><tr><th>Plant</th><th>Current Rakes</th><th>Actual Rakes</th><th>Current VC</th><th>Actual VC</th><th>Difference in VC</th></tr></thead>
+        <tbody>${plantRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderDiversionCalculator(){
+  const root = document.getElementById('diversionCalcBody');
+  if(!root) return;
+
+  // Suggested starting reference: the official OR-Tools allocation, when a
+  // successful run exists (never reads or mutates lastOfficialResult itself).
+  const suggestionByKey = {};
+  (lastOfficialResult && lastOfficialResult.allocations || []).forEach(a=>{
+    suggestionByKey[diversionInputKey(a.plant, a.company)] = a.optimized_rakes;
+  });
+
+  const srcRows = [];
+  state.forEach(p=>{
+    p.sources.forEach(s=>{
+      const key = diversionInputKey(p.name, s.name);
+      const entered = diversionActuals[key];
+      const hasEntered = entered!==undefined && entered!==null && !isNaN(entered);
+      const suggested = suggestionByKey[key];
+      const hasSuggestion = suggested!==undefined && suggested!==null;
+      const deltaSugg = hasSuggestion ? (suggested - s.currentRakes) : null;
+      srcRows.push(`
+        <tr data-plant="${p.name}" data-src="${s.name}">
+          <td>${p.name}</td>
+          <td>${s.name}</td>
+          <td class="readonly">&#8377;${s.currentVC.toFixed(4)}</td>
+          <td class="readonly">${fmt1(s.currentRakes)}</td>
+          <td><input class="cell-input" style="width:80px" type="number" step="0.1" min="0" data-field="actualRakes" value="${hasEntered?entered:''}" placeholder="${fmt1(s.currentRakes)}"></td>
+          <td class="readonly">${hasSuggestion ? fmt1(suggested) : '&mdash;'}</td>
+          <td class="readonly" style="color:${hasSuggestion?(deltaSugg>0.05?'var(--green)':(deltaSugg<-0.05?'var(--rust)':'var(--steel)')):'var(--steel)'}">${hasSuggestion?(deltaSugg>0.05?'+':(deltaSugg<-0.05?'':'&plusmn;'))+fmt1(Math.abs(deltaSugg)):'&mdash;'}</td>
+        </tr>`);
+    });
+  });
+
+  root.innerHTML = `
+    <div class="remark-note" style="margin-top:6px;">Enter the rakes actually diverted / received per source. The backend evaluates them as pure weighted averages over the same source VCs the optimizer uses - no solving, no bounds. <b>Seed from Optimizer suggestion</b> copies the official OR-Tools allocation into the column as a starting reference.</div>
+    <div class="section-label" style="margin-top:14px;">Actual / manual allocation (rakes)</div>
+    <div class="tbl-wrap">
+      <table class="src">
+        <thead><tr><th>Plant</th><th>Source</th><th>Source VC</th><th>Current Rakes</th><th>Actual Rakes (enter)</th><th>Optimizer Suggestion</th><th>Suggested &Delta;</th></tr></thead>
+        <tbody>${srcRows}</tbody>
+      </table>
+    </div>
+    <div id="diversionCalcResults"></div>`;
+
+  renderDiversionResultSection(lastDiversionResult);
+}
+
+// Event delegation: edits to the Actual Rakes column update diversionActuals
+// in place (no full re-render, to preserve focus/caret) and drop any stale
+// calculated result so it is never shown next to changed inputs.
+document.getElementById('diversionCalcBody').addEventListener('input', e=>{
+  if(!e.target || e.target.dataset.field !== 'actualRakes') return;
+  const tr = e.target.closest('tr');
+  if(!tr) return;
+  const key = diversionInputKey(tr.dataset.plant, tr.dataset.src);
+  if(e.target.value === ''){
+    delete diversionActuals[key];
+  }else{
+    const val = parseFloat(e.target.value);
+    diversionActuals[key] = (isNaN(val) || val < 0) ? null : val;
+  }
+  if(lastDiversionResult){
+    lastDiversionResult = null;
+    const resultsEl = document.getElementById('diversionCalcResults');
+    if(resultsEl) resultsEl.innerHTML = `<div class="remark-note" style="margin-top:12px;">Re-run <b>Calculate Diversion VC</b> after editing the actuals.</div>`;
+  }
+});
+
+document.getElementById('diversionCalcOpenBtn').addEventListener('click', ()=>{
+  document.getElementById('diversionCalcWrap').style.display = 'block';
+  renderDiversionCalculator();
+});
+
+document.getElementById('diversionCalcCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('diversionCalcWrap').style.display = 'none';
+});
+
+document.getElementById('diversionCalcSeedBtn').addEventListener('click', ()=>{
+  if(!lastOfficialResult || !lastOfficialResult.allocations || !lastOfficialResult.allocations.length){
+    const resultsEl = document.getElementById('diversionCalcResults');
+    if(resultsEl) resultsEl.innerHTML = `<div class="remark-note" style="margin-top:12px;">Run <b>Optimize Allocation (OR-Tools)</b> first - the official suggested allocation is the starting reference for the Actual column.</div>`;
+    return;
+  }
+  (lastOfficialResult.allocations||[]).forEach(a=>{
+    diversionActuals[diversionInputKey(a.plant, a.company)] = a.optimized_rakes;
+  });
+  lastDiversionResult = null; // inputs changed - the previous result no longer matches
+  renderDiversionCalculator();
+});
+
+let isDiversionCalculating = false;
+
+document.getElementById('diversionCalcBtn').addEventListener('click', async (event)=>{
+  event?.preventDefault();
+  if(isDiversionCalculating) return;
+  isDiversionCalculating = true;
+  const btn = document.getElementById('diversionCalcBtn');
+  const original = btn.textContent;
+  btn.textContent = 'Calculating...';
+  btn.disabled = true;
+  try{
+    const payload = buildDiversionPayload();
+    let resp;
+    try{
+      resp = await fetch(`${OPTIMIZER_API_BASE}/calculate-diversion`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+    }catch(networkErr){
+      console.error('[diversion] network failure calling /calculate-diversion:', networkErr);
+      lastDiversionResult = {status:'validation_error', errors:[], message:`Could not reach <code>${OPTIMIZER_API_BASE}/calculate-diversion</code>. Details: ${networkErr.message}`};
+      renderDiversionResultSection(lastDiversionResult);
+      return;
+    }
+
+    if(resp.status === 422){
+      const detail = await resp.json().catch(()=>null);
+      const items = (detail && detail.detail) || [];
+      const msgs = items.length
+        ? items.map(d => `<div>${(d.loc||[]).join(' → ')}: ${d.msg}</div>`).join('')
+        : 'Request payload failed validation.';
+      lastDiversionResult = {status:'validation_error', errors:[], message:msgs};
+      renderDiversionResultSection(lastDiversionResult);
+      return;
+    }
+
+    if(!resp.ok){
+      const text = await resp.text().catch(()=>'');
+      lastDiversionResult = {status:'validation_error', errors:[], message:`Backend returned HTTP ${resp.status}.${text ? ' Details: '+text : ''}`};
+      renderDiversionResultSection(lastDiversionResult);
+      return;
+    }
+
+    let result;
+    try{
+      result = await resp.json();
+    }catch(parseErr){
+      lastDiversionResult = {status:'validation_error', errors:[], message:'The backend returned a response that was not valid JSON.'};
+      renderDiversionResultSection(lastDiversionResult);
+      return;
+    }
+
+    lastDiversionResult = result;
+    renderDiversionResultSection(result);
+    console.log('[diversion] /calculate-diversion response:', result);
+  }catch(err){
+    console.error('[diversion] unexpected error:', err);
+    lastDiversionResult = {status:'validation_error', errors:[], message:`Unexpected error: ${err.message}`};
+    renderDiversionResultSection(lastDiversionResult);
+  }finally{
+    isDiversionCalculating = false;
+    btn.textContent = original;
+    btn.disabled = false;
+  }
 });
 
 // FEATURE 3: sortable headers are static markup (not regenerated per-render

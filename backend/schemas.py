@@ -129,3 +129,53 @@ class OptimizeResponse(BaseModel):
     errors: List[ValidationErrorEntry] = []
     message: Optional[str] = None
     total_shutdowns: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Post-diversion calculator (deliberately separate from the optimizer: it
+# evaluates operator-entered ACTUAL/manual rake diversions as pure weighted
+# averages - no solving, no bounds, no company conservation logic).
+# ---------------------------------------------------------------------------
+
+class DiversionSourceInput(BaseModel):
+    """A single Plant x Coal Company row as actually diverted by the operator.
+
+    rakes is the ACTUAL/manual allocation entered by the operator (may be
+    fractional - it is only used as a weighting factor for the VC blend, it
+    is never fed to any solver); current_rakes stays the pre-diversion
+    reference for the "current" VC baseline.
+    """
+    company: str = Field(..., description="Coal company / source name, e.g. 'BCCL'")
+    current_rakes: float = Field(..., ge=0, description="Pre-diversion rakes for this plant-company pair (reference baseline)")
+    current_vc: float = Field(..., gt=0, description="Manually entered current Variable Cost (Rs/unit) for this source")
+    rakes: float = Field(..., ge=0, description="Actually diverted / manually entered rakes for this plant-company pair")
+
+
+class DiversionPlantInput(BaseModel):
+    plant: str = Field(..., description="Plant name")
+    sources: List[DiversionSourceInput]
+
+
+class DiversionRequest(BaseModel):
+    plants: List[DiversionPlantInput]
+
+
+class PlantDiversionResult(BaseModel):
+    plant: str
+    current_rakes: float  # sum of current_rakes across the plant's sources
+    actual_rakes: float   # sum of the entered actual rakes
+    current_vc: Optional[float] = None  # rake-weighted, using CURRENT rakes
+    actual_vc: Optional[float] = None   # rake-weighted, using ACTUAL rakes
+    delta_vc: Optional[float] = None    # actual_vc - current_vc
+
+
+class DiversionResponse(BaseModel):
+    status: str  # "ok" | "validation_error"
+    weighted_vc_current: Optional[float] = None  # overall blended VC of the current mix
+    weighted_vc_actual: Optional[float] = None   # overall blended VC of the actual mix
+    vc_improvement: Optional[float] = None       # weighted_vc_current - weighted_vc_actual
+    total_rakes_current: float = 0
+    total_rakes_actual: float = 0
+    plants: List[PlantDiversionResult] = []
+    errors: List[ValidationErrorEntry] = []
+    message: Optional[str] = None

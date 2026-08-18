@@ -427,3 +427,141 @@ def test_plant_without_threshold_is_unconstrained():
     assert all(p["rsd_status"] == "no_constraint" for p in body["plants"])
     assert all(not p["exceeded_threshold"] for p in body["plants"])
     assert not any(c["name"].startswith("RSD threshold") for c in body["constraint_status"])
+
+
+def test_multiple_unavoidable_rsd_plants_minimized():
+    """When several plants cannot stay under their thresholds at once, the
+    solver minimizes the shutdown count: PlantY (both sources above its
+    threshold) and PlantZ (must take >= 6 rakes of its 4.60 source) are
+    unavoidably in RSD, so the minimum is 2 - PlantX is kept safe."""
+    payload = {
+        "plants": [
+            {
+                "plant": "PlantX",
+                "rsd_threshold_vc": 4.40,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 10, "current_vc": 4.30, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 0, "current_vc": 4.80, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+            {
+                "plant": "PlantY",
+                "rsd_threshold_vc": 4.40,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 10, "current_vc": 4.45, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 0, "current_vc": 4.95, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+            {
+                "plant": "PlantZ",
+                "rsd_threshold_vc": 4.20,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 0, "current_vc": 4.60, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 20, "current_vc": 4.10, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+        ]
+    }
+    resp = client.post("/optimize", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["status"] in ("Optimal", "Feasible")
+    assert body["total_shutdowns"] == 2
+
+    x = next(p for p in body["plants"] if p["plant"] == "PlantX")
+    y = next(p for p in body["plants"] if p["plant"] == "PlantY")
+    z = next(p for p in body["plants"] if p["plant"] == "PlantZ")
+
+    assert x["rsd_status"] == "safe"
+    assert y["rsd_status"] == "rsd"
+    assert z["rsd_status"] == "rsd"
+    assert x["optimized_vc"] <= 4.40 + 1e-6
+    assert y["optimized_vc"] >= 4.45 - 1e-4  # cheapest of its sources
+    assert z["optimized_vc"] > 4.20 + 1e-3   # unavoidable exceedance
+
+
+def test_existing_constraints_hold_with_rsd_thresholds():
+    """Company conservation, plant-total bounds, and integrality must all
+    still hold when RSD thresholds are active."""
+    payload = {
+        "plants": [
+            {
+                "plant": "PlantA",
+                "rsd_threshold_vc": 4.12,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 10, "current_vc": 4.10, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 0, "current_vc": 4.40, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+            {
+                "plant": "PlantB",
+                "rsd_threshold_vc": 4.12,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 0, "current_vc": 4.05, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 10, "current_vc": 4.20, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+        ]
+    }
+    resp = client.post("/optimize", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["status"] in ("Optimal", "Feasible")
+
+    current_by_company = {"Co1": 10, "Co2": 10}
+    optimized_by_company = {}
+    for a in body["allocations"]:
+        optimized_by_company[a["company"]] = optimized_by_company.get(a["company"], 0) + a["optimized_rakes"]
+    for company, total in current_by_company.items():
+        assert abs(optimized_by_company[company] - total) < 0.5
+
+    for p in body["plants"]:
+        current_total = 10
+        assert current_total * 0.8 - 0.5 <= p["optimized_rakes"] <= current_total * 1.1 + 0.5
+        assert _is_whole_number(p["optimized_rakes"])
+
+    for entry in body["constraint_status"]:
+        if entry["name"].startswith("Company conservation") or entry["name"].startswith("Plant total bound"):
+            assert entry["satisfied"]
+        if entry["name"] == "Global total rakes conserved":
+            assert entry["satisfied"]
+
+
+def test_empty_threshold_is_no_constraint_alongside_real_thresholds():
+    payload = {
+        "plants": [
+            {
+                "plant": "PlantA",
+                "rsd_threshold_vc": "",
+                "sources": [
+                    {"company": "Co1", "current_rakes": 10, "current_vc": 4.15, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 0, "current_vc": 4.40, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+            {
+                "plant": "PlantB",
+                "rsd_threshold_vc": 4.12,
+                "sources": [
+                    {"company": "Co1", "current_rakes": 0, "current_vc": 4.20, "minRakes": 0, "maxRakes": 10},
+                    {"company": "Co2", "current_rakes": 10, "current_vc": 4.30, "minRakes": 0, "maxRakes": 10},
+                ],
+            },
+        ]
+    }
+    resp = client.post("/optimize", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["status"] in ("Optimal", "Feasible")
+    assert body["total_shutdowns"] == 1  # only PlantB counts
+
+    a = next(p for p in body["plants"] if p["plant"] == "PlantA")
+    b = next(p for p in body["plants"] if p["plant"] == "PlantB")
+
+    assert a["rsd_threshold_vc"] is None
+    assert a["rsd_status"] == "no_constraint"
+    assert not a["exceeded_threshold"]
+    assert b["rsd_threshold_vc"] == 4.12
+    assert b["rsd_status"] == "rsd"

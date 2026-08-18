@@ -8,8 +8,9 @@ Run with:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from schemas import OptimizeRequest, OptimizeResponse
+from schemas import OptimizeRequest, OptimizeResponse, DiversionRequest, DiversionResponse
 from optimizer import optimize
+from diversion import calculate
 
 app = FastAPI(
     title="Coal Rake Diversion Optimizer",
@@ -40,3 +41,14 @@ def optimize_allocation(request: OptimizeRequest) -> OptimizeResponse:
     OR-Tools-solved optimal rake allocation that minimizes weighted VC.
     """
     return optimize(request)
+
+
+@app.post("/calculate-diversion", response_model=DiversionResponse)
+def calculate_diversion(request: DiversionRequest) -> DiversionResponse:
+    """
+    Accepts the operator's ACTUAL/manual rake diversions and returns the
+    resulting plant-wise and overall (blended) Variable Cost. Pure weighted
+    averages - no optimization, no bounds, no RSD logic (separate from
+    POST /optimize by design).
+    """
+    return calculate(request)
