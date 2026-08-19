@@ -272,6 +272,146 @@ footer h4{font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-
 footer .cols{display:grid;grid-template-columns:1.3fr 1fr;gap:34px;border-top:1px solid var(--line);padding-top:22px;}
 code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
 
+/* ===== Premium KPI cards ===== */
+.kpi-card{position:relative;overflow:hidden;}
+.kpi-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.kpi-icon{
+  width:34px;height:34px;flex-shrink:0;border-radius:9px;display:grid;place-items:center;
+  background:#F2F5F7;border:1px solid var(--line);color:var(--steel);
+}
+.kpi-icon svg{width:17px;height:17px;display:block;}
+.kpi-card .kpi-delta{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;font-weight:600;}
+.kpi-delta .delta-chip{
+  display:inline-flex;align-items:center;justify-content:center;min-width:40px;padding:2px 7px;
+  border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.01em;
+}
+.kpi-delta.pos .delta-chip{background:var(--green-soft);color:var(--green);}
+.kpi-delta.neg .delta-chip{background:var(--rust-soft);color:var(--rust);}
+.kpi-delta.neutral .delta-chip{background:#EAEDF0;color:var(--steel);}
+
+/* ===== Optimization workflow strip ===== */
+.flow{
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:14px 18px;box-shadow:var(--shadow-sm);margin-bottom:26px;
+}
+.flow-node{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#F4F6F8;border:1px solid var(--line);border-radius:20px;
+  padding:7px 13px;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap;
+  transition:border-color .12s ease, background-color .12s ease;
+}
+.flow-node b{
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;color:var(--gold-deep);
+  letter-spacing:.06em;
+}
+.flow-node:hover{border-color:var(--gold);background:#FBF7EC;}
+.flow-arrow{color:var(--steel-soft);font-size:13px;font-weight:700;}
+
+/* ===== VC comparison chart (plant panel) ===== */
+.vc-compare{
+  margin:22px 0 26px;padding:16px 18px 14px;
+  background:#FBFCFD;border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:inset 0 1px 0 #FFFFFF;
+}
+.vcb{display:grid;grid-template-columns:132px 1fr 148px;gap:12px;align-items:center;margin-bottom:13px;}
+.vcb:last-of-type{margin-bottom:6px;}
+.vcb-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--steel);font-weight:600;white-space:nowrap;}
+.vcb-track{position:relative;height:16px;background:#E9EDF0;border-radius:8px;overflow:hidden;}
+.vcb-bar{position:absolute;top:0;bottom:0;left:0;border-radius:8px;transition:width .4s ease;min-width:4px;}
+.vcb-cur{background:#8B98A5;}
+.vcb-opt{background:var(--gold);}
+.vcb-opt.good{background:var(--green);}
+.vcb-opt.high{background:var(--rust);}
+.vcb-tgt{background:var(--navy);opacity:.85;}
+.vcb-val{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--navy);text-align:right;white-space:nowrap;}
+.vcb-val small{color:var(--steel);font-weight:500;font-size:10.5px;margin-left:2px;}
+.vcb-threshold{
+  position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--rust);
+  opacity:.9;pointer-events:none;z-index:1;
+}
+.vc-compare-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft);font-size:10.5px;color:var(--steel);}
+.vc-compare-legend span{display:inline-flex;align-items:center;gap:6px;}
+.vc-compare-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+.vc-compare-legend i.th{width:2px;height:12px;border-radius:0;}
+.rsd-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--steel);}
+
+/* ===== Source allocation delta chart ===== */
+.src-delta{margin:0 0 26px;}
+.sd-row{
+  display:grid;grid-template-columns:170px 1fr 218px;gap:14px;align-items:center;
+  padding:11px 0;border-top:1px solid var(--line-soft);
+}
+.sd-row:first-of-type{border-top:none;}
+.sd-name{font-size:12.5px;font-weight:600;color:var(--navy);display:flex;align-items:center;white-space:nowrap;}
+.sd-name .chip{flex-shrink:0;}
+.sd-bars{display:flex;flex-direction:column;gap:5px;}
+.sd-barline{position:relative;height:12px;background:#EDF0F3;border-radius:6px;}
+.sd-bar{position:absolute;top:0;bottom:0;left:0;border-radius:6px;transition:width .35s ease;min-width:3px;}
+.sd-cur{background:#8B98A5;}
+.sd-opt{background:var(--gold);}
+.sd-nums{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--steel);text-align:right;white-space:nowrap;}
+.sd-nums b{color:var(--navy);font-weight:600;}
+.sd-delta{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:6px;font-weight:700;font-size:11px;font-family:'IBM Plex Sans',sans-serif;}
+.sd-delta.pos{background:var(--green-soft);color:var(--green);}
+.sd-delta.neg{background:var(--rust-soft);color:var(--rust);}
+.sd-delta.zero{background:#EAEDF0;color:var(--steel);}
+.sd-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:10.5px;color:var(--steel);}
+.sd-legend span{display:inline-flex;align-items:center;gap:6px;}
+.sd-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+.sd-legend i.cur{background:#8B98A5;}
+.sd-legend i.opt{background:var(--gold);}
+
+/* ===== Wagons: connector + stats ===== */
+.train-gap{display:flex;align-items:center;justify-content:center;gap:10px;margin:-4px 0 0;color:var(--steel-soft);font-size:10.5px;white-space:nowrap;}
+.train-gap .tg-line{height:1px;width:52px;background:var(--line-soft);}
+.wl-stats{display:inline-flex;align-items:center;gap:8px;}
+.wl-stat{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 8px;}
+
+/* ===== Spinner + button flashes ===== */
+.spinner{
+  width:13px;height:13px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;
+  border-radius:50%;display:inline-block;vertical-align:-2px;margin-right:7px;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes okpulse{0%{box-shadow:0 0 0 0 rgba(47,125,93,0.45);}100%{box-shadow:0 0 0 0 rgba(47,125,93,0);}}
+@keyframes errpulse{0%{box-shadow:0 0 0 0 rgba(179,63,43,0.45);}100%{box-shadow:0 0 0 0 rgba(179,63,43,0);}}
+.btn.flash-ok{animation:okpulse 1s ease-out 1;outline:2px solid var(--green);outline-offset:2px;}
+.btn.flash-err{animation:errpulse 1s ease-out 1;outline:2px solid var(--rust);outline-offset:2px;}
+
+/* ===== Toast entrance ===== */
+@keyframes toastin{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+.toast{animation:toastin .18s ease-out;}
+
+/* ===== Panel entrance + ghost buttons on light panels ===== */
+@keyframes rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+#serverOptimizeWrap .panel, #diversionCalcWrap .panel{animation:rise .22s ease-out;}
+.panel .btn-ghost{color:var(--steel);border-color:var(--line);background:var(--panel);}
+.panel .btn-ghost:hover{background:#F4F6F8;border-color:var(--steel-soft);}
+
+/* ===== Empty states ===== */
+.remark-note.empty-state{
+  display:flex;align-items:center;gap:10px;
+  background:#F4F6F8;border:1px dashed var(--line-soft);border-left:3px solid var(--steel-soft);
+  color:var(--steel);
+}
+.remark-note.empty-state .es-icon{flex-shrink:0;width:16px;height:16px;color:var(--steel-soft);}
+
+/* ===== Tab caret + index chip ===== */
+.tab .tab-caret{
+  position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);
+  width:0;height:0;border:7px solid transparent;border-top-color:var(--navy);border-bottom:none;
+  opacity:0;transition:opacity .15s ease;
+}
+.tab.active .tab-caret{opacity:1;}
+.tab .tab-idx{
+  display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;
+  background:#F2F5F7;border:1px solid var(--line);color:var(--steel);
+  font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;margin-right:7px;vertical-align:1px;
+}
+.tab.active .tab-idx{background:var(--gold-soft);border-color:#E3CF93;color:var(--gold-deep);}
+
 @media (max-width:1120px){
   .kpi-strip{grid-template-columns:repeat(2,1fr);}
   .topbar-controls{justify-content:flex-start;}
@@ -336,6 +476,29 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .tab{min-width:150px;}
   table.src{min-width:600px;}
 }
+
+/* Responsive refinements for the added visualization blocks */
+@media (max-width:1120px){
+  .vcb{grid-template-columns:118px 1fr 130px;}
+  .sd-row{grid-template-columns:150px 1fr 186px;}
+}
+@media (max-width:820px){
+  .vcb{grid-template-columns:112px 1fr 118px;gap:10px;}
+  .sd-row{grid-template-columns:132px 1fr;gap:10px;}
+  .sd-nums{grid-column:2/3;text-align:left;}
+}
+@media (max-width:640px){
+  .flow{padding:10px 12px;gap:8px;}
+  .flow-node{padding:6px 11px;font-size:10.5px;}
+  .kpi-icon{width:30px;height:30px;}
+  .vcb{grid-template-columns:1fr;gap:6px;}
+  .vcb-val{text-align:left;}
+  .sd-row{grid-template-columns:1fr;gap:8px;}
+  .sd-nums{grid-column:auto;text-align:left;}
+  .wl-stats{gap:6px;}
+  .train-gap{display:none;}
+  .tab .tab-caret{display:none;}
+}
 </style>
 </head>
 <body>
@@ -372,6 +535,18 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 
 <div class="kpi-wrap">
   <div class="kpi-strip" id="kpiStrip"></div>
+</div>
+
+<div class="flow" role="presentation">
+  <div class="flow-node"><b>1 &middot; Coal Sources</b><span>GCV / rate / freight / SCC / APC</span></div>
+  <span class="flow-arrow" aria-hidden="true">&#8594;</span>
+  <div class="flow-node"><b>2 &middot; Rakes</b><span>whole-number availability per plant</span></div>
+  <span class="flow-arrow" aria-hidden="true">&#8594;</span>
+  <div class="flow-node"><b>3 &middot; Plant Allocation</b><span>min/max share caps per source</span></div>
+  <span class="flow-arrow" aria-hidden="true">&#8594;</span>
+  <div class="flow-node"><b>4 &middot; RSD / VC Optimization</b><span>OR-Tools targets &amp;&nbsp;conservation</span></div>
+  <span class="flow-arrow" aria-hidden="true">&#8594;</span>
+  <div class="flow-node"><b>5 &middot; Final Allocation</b><span>whole rakes &middot; target check</span></div>
 </div>
 
 <!-- FEATURE 3: Portfolio Rake Distribution. Populated ONLY from a
@@ -992,10 +1167,11 @@ function flashButton(id, successText, failText, ok){
   if(!btn) return;
   const original = btn.textContent;
   btn.textContent = ok ? successText : failText;
+  btn.classList.add(ok ? 'flash-ok' : 'flash-err');
   btn.disabled = true;
   setTimeout(()=>{
     const el = document.getElementById(id);
-    if(el){ el.textContent = original; el.disabled = false; }
+    if(el){ el.textContent = original; el.classList.remove('flash-ok','flash-err'); el.disabled = false; }
   }, 1300);
 }
 
@@ -1113,6 +1289,42 @@ function render(){
 // client-side per-plant water-filling preview (optimizePlant), NOT from the
 // backend. They are labeled "preview" in the rendered markup below - do not
 // remove that qualifier or treat this card as the official result.
+// minimal line icons for KPI cards (stroke = currentColor, so they inherit
+// the theme) - presentational only, never carry data
+const ICON_GAUGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 18.5a8.5 8.5 0 1 1 13 0"/><path d="M12 13l4-4"/><circle cx="12" cy="14" r="1.4"/></svg>';
+const ICON_TREND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17.5L9 12l3.5 3.5L20.5 7"/><path d="M15 7h5.5v5.5"/></svg>';
+const ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg>';
+const ICON_TRAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="14" height="9" rx="2"/><path d="M7.5 8V5.5h6V8"/><path d="M17.5 12h3v4.5h-3"/><path d="M5 17.5 3.5 20M12 17.5l-1.5 2.5M18.5 17.5L20 20"/></svg>';
+
+// Counts a KPI number up from its previous value to the new one (ease-out).
+// Whole values animate as integers; decimal values keep their fixed digits.
+// Falls back to an instant write when the environment has no rAF.
+const kpiPrev = {};
+function animateKpis(vals){
+  const els = document.querySelectorAll('#kpiStrip .kpi-num[data-v]');
+  els.forEach(el=>{
+    const key = el.dataset.v;
+    const to = vals[key];
+    const dec = parseInt(el.dataset.dec || '0', 10);
+    if(!(key in kpiPrev)) kpiPrev[key] = to;
+    const from = kpiPrev[key];
+    kpiPrev[key] = to;
+    const paint = v => { el.textContent = dec ? v.toFixed(dec) : String(Math.round(v)); };
+    if(from === to || typeof requestAnimationFrame !== 'function' || typeof performance === 'undefined'){
+      paint(to);
+      return;
+    }
+    const t0 = performance.now();
+    const DUR = 520;
+    (function tick(){
+      const t = Math.min(1, (performance.now() - t0)/DUR);
+      const e = 1 - Math.pow(1 - t, 3);
+      paint(from + (to - from)*e);
+      if(t < 1) requestAnimationFrame(tick);
+    })();
+  });
+}
+
 function renderKPI(){
   const results = state.map(p=>optimizePlant(p));
   let wSumCur=0, wSumOpt=0, wTot=0, metBefore=0, metAfter=0, rakesShifted=0;
@@ -1140,24 +1352,39 @@ function renderKPI(){
 
   document.getElementById('kpiStrip').innerHTML = `
     <div class="kpi-card">
-      <div class="kpi-label">Portfolio avg VC &middot; current mix</div>
-      <div class="kpi-value">&#8377;${fmt2(avgCur)}<small>/unit</small></div>
+      <div class="kpi-top">
+        <div class="kpi-label">Portfolio avg VC &middot; current mix</div>
+        <span class="kpi-icon" aria-hidden="true">${ICON_GAUGE}</span>
+      </div>
+      <div class="kpi-value"><span class="kpi-num" data-v="avgCur" data-dec="4">${fmt2(avgCur)}</span><small>/unit</small></div>
+      <div class="kpi-delta neutral"><span class="delta-chip">&asymp;</span>weighted across all plants</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Portfolio avg VC &middot; preview <span class="badge na" style="margin-top:0;">client-side</span></div>
-      <div class="kpi-value">&#8377;${fmt2(avgOpt)}<small>/unit</small></div>
-      <div class="kpi-delta ${delta<=0?'pos':'neg'}">${delta<=0?'&#9660;':'&#9650;'} ${fmt2(Math.abs(delta))} vs current</div>
+      <div class="kpi-top">
+        <div class="kpi-label">Portfolio avg VC &middot; preview <span class="badge na" style="margin-top:0;">client-side</span></div>
+        <span class="kpi-icon" aria-hidden="true">${ICON_TREND}</span>
+      </div>
+      <div class="kpi-value"><span class="kpi-num" data-v="avgOpt" data-dec="4">${fmt2(avgOpt)}</span><small>/unit</small></div>
+      <div class="kpi-delta ${delta<=0?'pos':'neg'}"><span class="delta-chip">${delta<=0?'&#9660;':'&#9650;'} ${fmt2(Math.abs(delta))}</span>vs current mix</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Plants at or under target <span style="color:var(--steel-soft);font-weight:500;">(preview)</span></div>
-      <div class="kpi-value">${metAfter}<small>/${state.length}</small></div>
-      <div class="kpi-delta ${metAfter>=metBefore?'pos':'neg'}">was ${metBefore}/${state.length} before</div>
+      <div class="kpi-top">
+        <div class="kpi-label">Plants at target <span class="badge na" style="margin-top:0;">preview</span></div>
+        <span class="kpi-icon" aria-hidden="true">${ICON_TARGET}</span>
+      </div>
+      <div class="kpi-value"><span class="kpi-num" data-v="metAfter" data-dec="0">${metAfter}</span><small>/${state.length}</small></div>
+      <div class="kpi-delta ${metAfter-metBefore>0?'pos':(metAfter-metBefore<0?'neg':'neutral')}"><span class="delta-chip">${metAfter-metBefore>0?'+':''}${metAfter-metBefore}</span>vs ${metBefore} before</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Rake volume reallocated / mo <span style="color:var(--steel-soft);font-weight:500;">(preview)</span></div>
-      <div class="kpi-value">${fmtRakes(rakesShifted)}<small>rakes</small></div>
+      <div class="kpi-top">
+        <div class="kpi-label">Rakes reallocated / month <span class="badge na" style="margin-top:0;">preview</span></div>
+        <span class="kpi-icon" aria-hidden="true">${ICON_TRAIN}</span>
+      </div>
+      <div class="kpi-value"><span class="kpi-num" data-v="rakesShifted" data-dec="0">${fmtRakes(rakesShifted)}</span><small>rakes</small></div>
+      <div class="kpi-delta neutral"><span class="delta-chip">&#8635;</span>whole rakes &middot; per plant</div>
     </div>
   `;
+  animateKpis({avgCur, avgOpt, metAfter, rakesShifted});
 }
 
 function renderTabs(){
@@ -1168,12 +1395,13 @@ function renderTabs(){
     const ok = curVC!==null ? curVC<=globalTarget : null;
     const badge = ok===null ? `<span class="badge na">no current data</span>` : (ok?`<span class="badge ok">at target</span>`:`<span class="badge bad">above target</span>`);
     const wheels = p.sources.map(s=>`<span class="wheel" style="background:${colorFor(s.name)}"></span>`).join('');
-    return `<div class="tab ${i===activeIdx?'active':''}" data-idx="${i}">
-      <div class="tab-name">${p.name}</div>
+    return `<div class="tab ${i===activeIdx?'active':''}" data-idx="${i}" role="tab" aria-selected="${i===activeIdx?'true':'false'}">
+      <div class="tab-name"><span class="tab-idx">${String(i+1).padStart(2,'0')}</span>${p.name}</div>
       <div class="tab-type">${p.linkageType||''}</div>
       <div class="tab-vc">${curVC!==null?('&#8377;'+fmt2(curVC)):'&mdash;'}</div>
       ${badge}
       <div class="wheelrow">${wheels}</div>
+      <i class="tab-caret" aria-hidden="true"></i>
     </div>`;
   }).join('');
   document.querySelectorAll('.tab').forEach(el=>{
@@ -1211,9 +1439,77 @@ function renderPanel(){
     </tr>`;
   }).join('');
 
-  const trainCurrent = renderTrain(plant.sources.map(s=>({name:s.name, share:s.currentShare*100})));
-  const trainOptimized = r.infeasible ? `<div style="font-size:12px;color:var(--steel);padding:8px 0;">No feasible mix under current Min/Max caps &mdash; widen a Max % to see the optimized train.</div>`
-    : renderTrain(plant.sources.map(s=>({name:s.name, share:r.alloc[s.name]*100})));
+  // Whole-rake preview allocation (largest remainder, identical to the one
+  // applyOptimizedToPlant would apply) - feeds the optimized wagon train's
+  // per-wagon rake counts and the source allocation chart below.
+  const whole = r.infeasible ? null : wholeRakeAllocation(plant, r);
+
+  const trainCurrent = renderTrain(plant.sources.map(s=>({name:s.name, share:s.currentShare*100, rakes:s.currentRakes})));
+  const trainOptimized = r.infeasible ? `<div class="remark-note" style="margin-top:8px;">No feasible mix under current Min/Max caps &mdash; widen a Max % to see the optimized train.</div>`
+    : renderTrain(plant.sources.map((s,i)=>({name:s.name, share:r.alloc[s.name]*100, rakes:whole?whole[i]:undefined})));
+
+  // --- VC comparison chart (Current / Preview / Target ceiling, RSD marker)
+  const vcMax = Math.max(cur||0, opt||0, globalTarget||0, 0.001) * 1.12;
+  const thPct = (plant.rsd_threshold!==null && plant.rsd_threshold!==undefined)
+    ? Math.min(100, Math.max(0, 100*plant.rsd_threshold/vcMax)) : null;
+  const vcbRow = (label, val, cls, badgeHtml) => {
+    const w = (val===null||val===undefined||isNaN(val)) ? 0 : Math.max(100*(val/vcMax), 3);
+    return `<div class="vcb">
+      <span class="vcb-label">${label}${badgeHtml||''}</span>
+      <div class="vcb-track">${thPct!==null?`<span class="vcb-threshold" style="left:${thPct}%" title="RSD threshold"></span>`:''}<div class="vcb-bar ${cls}" style="width:${w}%"></div></div>
+      <span class="vcb-val">${(val===null||val===undefined||isNaN(val))?'&mdash;':'&#8377;'+fmt2(val)}<small>/unit</small></span>
+    </div>`;
+  };
+  const previewBarCls = r.infeasible ? 'vcb-cur'
+    : (opt<=globalTarget ? 'vcb-opt good' : 'vcb-opt high');
+  const vcCompareHtml = `
+      <div class="vc-compare">
+        <div class="section-label" style="margin:0 0 14px;">Plant VC comparison</div>
+        ${vcbRow('Current mix', cur, 'vcb-cur')}
+        ${vcbRow('Preview mix', opt, previewBarCls, '<span class="badge na" style="margin-left:6px;margin-top:0;">client-side</span>')}
+        ${vcbRow('Target ceiling', globalTarget, 'vcb-tgt')}
+        <div class="vc-compare-legend">
+          <span><i style="background:#8B98A5"></i>Current mix</span>
+          <span><i style="background:${previewBarCls.indexOf('good')>=0?'var(--green)':(previewBarCls.indexOf('high')>=0?'var(--rust)':'var(--gold)')}"></i>Preview mix</span>
+          <span><i style="background:var(--navy)"></i>Target ceiling</span>
+          ${thPct!==null?`<span><i class="th" style="background:var(--rust)"></i>RSD threshold</span>`:''}
+        </div>
+        <div class="rsd-line">
+          ${thPct!==null
+            ? `RSD threshold <span class="num" style="color:var(--navy);font-weight:700;">&#8377;${fmt2(plant.rsd_threshold)}</span>
+               &middot; current mix <span class="badge ${cur!==null&&cur>plant.rsd_threshold?'bad':'ok'}" style="margin-top:0;">${cur!==null&&cur>plant.rsd_threshold?'exceeds':'safe'}</span>
+               <span style="color:var(--steel-soft);font-size:10.5px;">(client-side check &mdash; the official verdict comes from &ldquo;Optimize Allocation (OR-Tools)&rdquo;)</span>`
+            : `<span>No RSD threshold set for this plant &mdash; enter one above (RSD Threshold (VC)) to enable the check.</span>`}
+        </div>
+      </div>`;
+
+  // --- Source allocation chart (current vs preview, whole rakes) ---
+  const sdRows = r.infeasible
+    ? `<div class="remark-note" style="margin-top:4px;">No feasible preview mix under current Min/Max caps &mdash; widen a Max % to see the whole-rake source split.</div>`
+    : plant.sources.map((s,i)=>{
+        const curR = s.currentRakes, optR = whole ? whole[i] : 0;
+        const maxR = Math.max(curR, optR) || 1;
+        const d = optR - curR;
+        const dCls = d>0?'pos':(d<0?'neg':'zero');
+        const dTxt = d>0?('+'+fmtRakes(d)):(d<0?fmtRakes(d):'&plusmn;0');
+        return `<div class="sd-row">
+          <span class="sd-name"><span class="chip" style="background:${colorFor(s.name)}"></span>${s.name}</span>
+          <div class="sd-bars">
+            <div class="sd-barline"><div class="sd-bar sd-cur" style="width:${Math.max(100*curR/maxR, curR?3:0)}%" title="Current: ${fmtRakes(curR)} rakes"></div></div>
+            <div class="sd-barline"><div class="sd-bar sd-opt" style="width:${Math.max(100*optR/maxR, optR?3:0)}%" title="Preview: ${fmtRakes(optR)} rakes"></div></div>
+          </div>
+          <span class="sd-nums"><b>${fmtRakes(curR)}</b> &#8594; <b>${fmtRakes(optR)}</b> rakes<span class="sd-delta ${dCls}">${dTxt}</span></span>
+        </div>`;
+      }).join('');
+  const srcDeltaHtml = `
+      <div class="src-delta">
+        <div class="section-label" style="margin:2px 0 12px;">Source allocation &middot; current vs preview</div>
+        ${sdRows}
+        <div class="sd-legend">
+          <span><i class="cur"></i>Current rakes</span>
+          <span><i class="opt"></i>Preview rakes (whole, total conserved)</span>
+        </div>
+      </div>`;
 
   document.getElementById('plantPanel').innerHTML = `
     <div class="panel">
@@ -1259,19 +1555,24 @@ function renderPanel(){
         }
       </div>
 
+      ${vcCompareHtml}
+
       <div class="wagons-block">
         <div class="wagons-row">
-          <div class="wagons-label"><span>Current rake split &middot; ${plant.basis==='receipt'?'July 2026 receipts':(plant.basis==='msq'?'MSQ share (no July receipts recorded)':'even split &ndash; no data')}</span><span>${fmt2(cur)} &#8377;/unit</span></div>
+          <div class="wagons-label"><span>Current rake split &middot; ${plant.basis==='receipt'?'July 2026 receipts':(plant.basis==='msq'?'MSQ share (no July receipts recorded)':'even split &ndash; no data')}</span><span class="wl-stats"><span class="wl-stat">${fmtRakes(plant.totalRakes)} rakes</span><span class="wl-stat">${cur!==null?('&#8377;'+fmt2(cur)):'&mdash;'} /unit</span></span></div>
           <div class="train">${trainCurrent}</div>
           <div class="rails"></div>
         </div>
+        <div class="train-gap"><span class="tg-line"></span><span>preview applies a whole-rake reallocation within this plant</span><span class="tg-line"></span></div>
         <div class="wagons-row">
-          <div class="wagons-label"><span>Preview rake split (client-side, not official)</span><span>${r.infeasible?'&mdash;':fmt2(opt)+' &#8377;/unit'}</span></div>
+          <div class="wagons-label"><span>Preview rake split <span class="badge na" style="margin: -2px 0 0 6px;">client-side, not official</span></span><span class="wl-stats"><span class="wl-stat">${fmtRakes(plant.totalRakes)} rakes</span><span class="wl-stat">${r.infeasible?'&mdash;':('&#8377;'+fmt2(opt)+' /unit')}</span></span></div>
           <div class="train">${trainOptimized}</div>
           <div class="rails"></div>
         </div>
         <div class="legend">${plant.sources.map(s=>`<span><span class="chip" style="background:${colorFor(s.name)}"></span>${s.name} &middot; &#8377;${fmt2(s.currentVC)}/unit</span>`).join('')}</div>
       </div>
+
+      ${srcDeltaHtml}
 
       <div class="flex-controls">
         Auto Min/Max flex band around current split:
@@ -1366,7 +1667,8 @@ function renderTrain(items){
   return items.map(it=>{
     const w = Math.max(it.share, 0);
     if(w<=0.05) return '';
-    return `<div class="wagon" style="width:${w}%;background:${colorFor(it.name)}" title="${it.name}: ${it.share.toFixed(1)}%">${w>7?it.name+' '+it.share.toFixed(0)+'%':''}</div>`;
+    const rakesTxt = (it.rakes!==undefined && it.rakes!==null) ? ` &middot; ${fmtRakes(it.rakes)} rakes` : '';
+    return `<div class="wagon" style="width:${w}%;background:${colorFor(it.name)}" title="${it.name}: ${it.share.toFixed(1)}%${rakesTxt}">${w>7?(it.name+' '+it.share.toFixed(0)+'%'+rakesTxt):''}</div>`;
   }).join('');
 }
 
@@ -1842,7 +2144,7 @@ document.getElementById('serverOptimizeBtn').addEventListener('click', async (ev
   isServerOptimizing = true;
   const btn = document.getElementById('serverOptimizeBtn');
   const original = btn.textContent;
-  btn.textContent = 'Solving...';
+  btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Solving&hellip;';
   btn.disabled = true;
   try{
     // 1. Health check first, so a down backend fails fast with a clear,
@@ -2131,7 +2433,7 @@ document.getElementById('diversionCalcBtn').addEventListener('click', async (eve
   isDiversionCalculating = true;
   const btn = document.getElementById('diversionCalcBtn');
   const original = btn.textContent;
-  btn.textContent = 'Calculating...';
+  btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Calculating&hellip;';
   btn.disabled = true;
   try{
     const payload = buildDiversionPayload();
