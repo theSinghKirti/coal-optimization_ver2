@@ -92,14 +92,19 @@ input.target-num:focus{outline:none;border-bottom-color:#fff;}
   font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12.5px;
   border:none;border-radius:9px;min-height:44px;padding:0 18px;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;
-  transition:background-color .12s ease, box-shadow .12s ease, transform .08s ease;
+  transition:background-color .12s ease, box-shadow .12s ease, transform .08s ease, border-color .12s ease;
 }
+.btn:hover{transform:translateY(-1px);}
 .btn:active{transform:translateY(1px);}
-.btn[disabled]{opacity:.6;cursor:wait;}
-.btn-gold{background:var(--gold);color:#241800;}
-.btn-gold:hover{background:var(--gold-deep);box-shadow:0 4px 14px rgba(201,150,44,0.4);}
+.btn[disabled]{opacity:.6;cursor:wait;transform:none;}
+.btn-gold{background:var(--gold);color:#241800;box-shadow:0 2px 0 rgba(0,0,0,0.18), 0 4px 14px rgba(201,150,44,0.3);}
+.btn-gold:hover{background:var(--gold-deep);box-shadow:0 2px 0 rgba(0,0,0,0.2), 0 6px 18px rgba(201,150,44,0.4);}
 .btn-ghost{background:rgba(255,255,255,0.04);color:#EAF0F5;border:1px solid rgba(255,255,255,0.35);}
 .btn-ghost:hover{background:rgba(255,255,255,0.12);}
+.btn-ice{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.45);}
+.btn-ice:hover{background:rgba(255,255,255,0.16);}
+.btn-mute{background:transparent;color:#B9C6D2;border:1px solid rgba(255,255,255,0.2);min-height:40px;padding:0 14px;}
+.btn-mute:hover{color:#EAF0F5;background:rgba(255,255,255,0.08);}
 .btn-navy{background:var(--navy);color:#fff;}
 .btn-navy:hover{background:#0E2742;box-shadow:0 4px 14px rgba(11,30,51,0.35);}
 
@@ -107,13 +112,13 @@ input.target-num:focus{outline:none;border-bottom-color:#fff;}
 .kpi-wrap{max-width:1280px;margin:0 auto;padding:0 28px;}
 body > .kpi-wrap:first-of-type{margin-top:26px;}
 .kpi-wrap + .kpi-wrap{margin-top:22px;}
-.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;}
 .kpi-card{
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   padding:18px 20px;box-shadow:var(--shadow-sm);
-  transition:box-shadow .15s ease, transform .15s ease;
+  transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease;
 }
-.kpi-card:hover{box-shadow:var(--shadow-card);}
+.kpi-card:hover{box-shadow:var(--shadow-card);border-color:#C9D0D6;transform:translateY(-1px);}
 .kpi-card .kpi-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--steel);font-weight:600;line-height:1.5;}
 .kpi-card .kpi-value{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;margin-top:8px;color:var(--navy);line-height:1.15;}
 .kpi-card .kpi-value small{font-size:13px;font-weight:500;color:var(--steel);}
@@ -291,22 +296,24 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 
 /* ===== Optimization workflow strip ===== */
 .flow{
-  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;
+  display:flex;align-items:stretch;justify-content:center;flex-wrap:nowrap;gap:10px;
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  padding:14px 18px;box-shadow:var(--shadow-sm);margin-bottom:26px;
+  padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px;
 }
 .flow-node{
-  display:inline-flex;align-items:center;gap:8px;
+  flex:1 1 0;min-width:0;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
   background:#F4F6F8;border:1px solid var(--line);border-radius:20px;
-  padding:7px 13px;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap;
-  transition:border-color .12s ease, background-color .12s ease;
+  padding:9px 13px;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap;
+  transition:border-color .12s ease, background-color .12s ease, box-shadow .12s ease;
 }
 .flow-node b{
   font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;color:var(--gold-deep);
-  letter-spacing:.06em;
+  letter-spacing:.06em;flex-shrink:0;
 }
-.flow-node:hover{border-color:var(--gold);background:#FBF7EC;}
-.flow-arrow{color:var(--steel-soft);font-size:13px;font-weight:700;}
+.flow-node span{overflow:hidden;text-overflow:ellipsis;}
+.flow-node:hover{border-color:var(--gold);background:#FBF7EC;box-shadow:var(--shadow-sm);}
+.flow-arrow{color:var(--steel-soft);font-size:13px;font-weight:700;flex-shrink:0;align-self:center;}
 
 /* ===== VC comparison chart (plant panel) ===== */
 .vc-compare{
@@ -314,10 +321,11 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   background:#FBFCFD;border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:inset 0 1px 0 #FFFFFF;
 }
-.vcb{display:grid;grid-template-columns:132px 1fr 148px;gap:12px;align-items:center;margin-bottom:13px;}
+.vcb{display:grid;grid-template-columns:132px minmax(0,1fr) 148px;gap:12px;align-items:center;margin-bottom:13px;}
 .vcb:last-of-type{margin-bottom:6px;}
-.vcb-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--steel);font-weight:600;white-space:nowrap;}
-.vcb-track{position:relative;height:16px;background:#E9EDF0;border-radius:8px;overflow:hidden;}
+.vcb > *{min-width:0;}
+.vcb-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--steel);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;}
+.vcb-track{position:relative;height:16px;background:#E9EDF0;border-radius:8px;overflow:hidden;min-width:0;}
 .vcb-bar{position:absolute;top:0;bottom:0;left:0;border-radius:8px;transition:width .4s ease;min-width:4px;}
 .vcb-cur{background:#8B98A5;}
 .vcb-opt{background:var(--gold);}
@@ -339,13 +347,14 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 /* ===== Source allocation delta chart ===== */
 .src-delta{margin:0 0 26px;}
 .sd-row{
-  display:grid;grid-template-columns:170px 1fr 218px;gap:14px;align-items:center;
+  display:grid;grid-template-columns:170px minmax(0,1fr) 218px;gap:14px;align-items:center;
   padding:11px 0;border-top:1px solid var(--line-soft);
 }
+.sd-row > *{min-width:0;}
 .sd-row:first-of-type{border-top:none;}
-.sd-name{font-size:12.5px;font-weight:600;color:var(--navy);display:flex;align-items:center;white-space:nowrap;}
+.sd-name{font-size:12.5px;font-weight:600;color:var(--navy);display:flex;align-items:center;white-space:nowrap;overflow:hidden;}
 .sd-name .chip{flex-shrink:0;}
-.sd-bars{display:flex;flex-direction:column;gap:5px;}
+.sd-bars{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .sd-barline{position:relative;height:12px;background:#EDF0F3;border-radius:6px;}
 .sd-bar{position:absolute;top:0;bottom:0;left:0;border-radius:6px;transition:width .35s ease;min-width:3px;}
 .sd-cur{background:#8B98A5;}
@@ -412,22 +421,106 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 }
 .tab.active .tab-idx{background:var(--gold-soft);border-color:#E3CF93;color:var(--gold-deep);}
 
-@media (max-width:1120px){
-  .kpi-strip{grid-template-columns:repeat(2,1fr);}
+/* ===== Inline tags (small context chips inside labels/titles) ===== */
+.inline-tag{
+  display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;padding:2px 6px;border-radius:4px;
+  background:#EAEDF0;color:var(--steel);vertical-align:1px;white-space:nowrap;
+}
+.inline-tag.warn{background:var(--gold-soft);color:var(--gold-deep);}
+.rlabel .inline-tag, .wagons-label .inline-tag, .section-label .inline-tag{vertical-align:2px;}
+
+/* ===== "Explain This" help system ===== */
+.help-btn{
+  font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.02em;
+  color:var(--steel);background:#F2F5F7;border:1px solid var(--line);border-radius:20px;
+  padding:3px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+  transition:background-color .12s ease, border-color .12s ease, color .12s ease, transform .08s ease;
+}
+.help-btn:hover{background:var(--gold-soft);border-color:#E3CF93;color:var(--gold-deep);}
+.help-btn:active{transform:translateY(1px);}
+.help-btn.help-icon{width:22px;height:22px;padding:0;border-radius:50%;justify-content:center;font-size:12px;line-height:1;flex-shrink:0;}
+.help-btn[aria-expanded="true"]{background:var(--navy);border-color:var(--navy);color:#fff;}
+.kpi-top-action{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;}
+.section-label .help-btn{margin-left:auto;}
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+.flash-card{
+  position:fixed;z-index:130;width:290px;max-width:calc(100vw - 24px);
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow-pop);padding:14px 16px;
+  animation:flashIn .16s ease-out;
+}
+@keyframes flashIn{from{opacity:0;transform:translateY(5px) scale(.98);}to{opacity:1;transform:none;}}
+.flash-card .fc-head{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.flash-card .fc-icon{
+  flex-shrink:0;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+  background:var(--navy);color:var(--gold);font-size:12px;
+}
+.flash-card .fc-icon svg{width:14px;height:14px;}
+.flash-card .fc-num{
+  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;
+  background:var(--gold-soft);color:var(--gold-deep);border-radius:6px;
+  width:22px;height:22px;display:grid;place-items:center;margin-right:2px;
+}
+.flash-card h4{font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:700;color:var(--navy);margin:0;}
+.flash-card .fc-text{font-size:12px;color:var(--steel);line-height:1.6;}
+
+/* ===== Positional fixes / visual hierarchy refinements ===== */
+.kpi-top{flex-wrap:nowrap;}
+.kpi-card .kpi-label{flex:1;min-width:0;overflow-wrap:anywhere;}
+.kpi-icon svg{display:block;margin:auto;}
+.notice-banner{margin-bottom:0;}
+.panel-head .tag{flex-shrink:0;}
+.wagons-label{flex-wrap:wrap;align-items:baseline;}
+.wagons-label .wl-stats{margin-left:auto;}
+.wl-stats{flex-wrap:wrap;justify-content:flex-end;}
+.result-item{min-width:0;}
+.rsd-line .badge{margin-top:0;}
+.vc-compare .section-label, .src-delta .section-label{margin:0 0 14px;}
+#optimizationSummarySection .section-label{margin-top:0;}
+
+/* ---------- Responsive breakpoints ---------- */
+/* Laptop small / below 1140: KPI 2-up, tighter chart grids */
+@media (max-width:1140px){
+  .kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
   .topbar-controls{justify-content:flex-start;}
+  .vcb{grid-template-columns:118px minmax(0,1fr) 132px;}
+  .sd-row{grid-template-columns:150px minmax(0,1fr) 188px;}
 }
 
+/* Tablet / below 1024: workflow wraps in a clean 3+2 grid, tabs scroll, charts compact */
+@media (max-width:1024px){
+  .flow{flex-wrap:wrap;padding:14px 16px;}
+  .flow-node{flex:1 1 29%;white-space:normal;text-align:center;justify-content:center;padding:9px 10px;}
+  .flow-node span{overflow:visible;text-overflow:clip;}
+  .flow-arrow{display:none;}
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:14px;}
+  .tab{min-width:164px;flex:0 0 auto;}
+  .vcb{grid-template-columns:112px minmax(0,1fr) 120px;gap:10px;}
+  .sd-row{grid-template-columns:132px minmax(0,1fr);gap:10px;}
+  .sd-nums{grid-column:2/3;text-align:left;flex-wrap:wrap;display:flex;align-items:center;gap:6px;}
+  .sd-nums .sd-delta{margin-left:0;}
+  footer .cols{grid-template-columns:1fr;}
+}
+
+/* Tablet portrait / below 900: header stacks */
 @media (max-width:900px){
   .topbar-inner{flex-direction:column;align-items:stretch;}
   .topbar-controls{width:100%;justify-content:flex-start;}
 }
 
-@media (max-width:820px){
-  footer .cols{grid-template-columns:1fr;}
-  table.src{min-width:880px;}
+/* Mobile large / below 768: workflow 2-per-row stair */
+@media (max-width:768px){
+  .flow-node{flex:1 1 44%;}
+  .kpi-icon{width:30px;height:30px;}
+  .panel-actions{width:100%;justify-content:flex-start;}
+  .panel-head{gap:14px;}
 }
 
-/* ---------- Phone responsiveness ---------- */
+/* ---------- Phone ---------- */
 @media (max-width:640px){
   .topbar{padding:18px 16px 16px;}
   .topbar-inner{gap:18px;}
@@ -439,7 +532,10 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .topbar .sub{font-size:12px;max-width:100%;}
   .topbar-controls{width:100%;flex-direction:column;align-items:stretch;}
   .target-box{width:100%;justify-content:space-between;}
-  #optimizeAllBtn, #resetAllBtn, #serverOptimizeBtn, #diversionCalcOpenBtn{width:100%;text-align:center;}
+  .topbar-controls .btn,
+  #optimizeOneBtn, #diversionCalcSeedBtn, #diversionCalcBtn,
+  #diversionCalcCloseBtn, #serverOptimizeCloseBtn{width:100%;text-align:center;}
+  .btn-mute{min-height:44px;}
 
   main, footer{padding-left:14px;padding-right:14px;}
   .kpi-wrap{padding-left:14px;padding-right:14px;}
@@ -449,13 +545,11 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .kpi-card{padding:14px 16px;}
   .kpi-card .kpi-value{font-size:21px;}
 
-  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:10px;}
-  .tab{min-width:168px;flex:0 0 auto;}
-
+  .tabs{padding-bottom:10px;}
   .panel{padding:18px 16px 20px;}
   .panel-head{flex-direction:column;align-items:stretch;gap:12px;}
   .panel-head h2{font-size:19px;}
-  .panel-actions{width:100%;justify-content:flex-start;}
+  .panel-actions{flex-direction:column;align-items:stretch;}
 
   .result-strip{flex-direction:column;align-items:stretch;gap:12px;padding:14px 16px;margin:16px 0 20px;}
   .result-strip .arrow{transform:rotate(90deg);align-self:center;}
@@ -469,28 +563,9 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .tbl-wrap{-webkit-overflow-scrolling:touch;}
 
   footer .cols{grid-template-columns:1fr;gap:20px;}
-}
 
-@media (max-width:400px){
-  .kpi-strip{grid-template-columns:1fr;}
-  .tab{min-width:150px;}
-  table.src{min-width:600px;}
-}
-
-/* Responsive refinements for the added visualization blocks */
-@media (max-width:1120px){
-  .vcb{grid-template-columns:118px 1fr 130px;}
-  .sd-row{grid-template-columns:150px 1fr 186px;}
-}
-@media (max-width:820px){
-  .vcb{grid-template-columns:112px 1fr 118px;gap:10px;}
-  .sd-row{grid-template-columns:132px 1fr;gap:10px;}
-  .sd-nums{grid-column:2/3;text-align:left;}
-}
-@media (max-width:640px){
   .flow{padding:10px 12px;gap:8px;}
-  .flow-node{padding:6px 11px;font-size:10.5px;}
-  .kpi-icon{width:30px;height:30px;}
+  .flow-node{padding:7px 10px;font-size:10.5px;flex-basis:44%;}
   .vcb{grid-template-columns:1fr;gap:6px;}
   .vcb-val{text-align:left;}
   .sd-row{grid-template-columns:1fr;gap:8px;}
@@ -498,6 +573,15 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .wl-stats{gap:6px;}
   .train-gap{display:none;}
   .tab .tab-caret{display:none;}
+  .flash-card{width:min(290px,calc(100vw - 24px));}
+}
+
+/* Small phones / below 480: KPI 1-up, single-column workflow */
+@media (max-width:480px){
+  .kpi-strip{grid-template-columns:1fr;}
+  .tab{min-width:150px;}
+  table.src{min-width:600px;}
+  .flow-node{flex-basis:100%;}
 }
 </style>
 </head>
@@ -525,8 +609,8 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
           <div class="target-input-wrap"><span>&#8377;</span><input type="number" step="0.0001" id="globalTarget" class="target-num" value="4.0000"><span>/unit</span></div>
         </div>
       </div>
-      <button class="btn btn-gold" id="optimizeAllBtn" title="Client-side estimate only - does not enforce company-wide conservation across plants">Preview All Plant Mixes</button>
-      <button class="btn btn-ghost" id="resetAllBtn">Reset to source data</button>
+      <button class="btn btn-ice" id="optimizeAllBtn" title="Client-side estimate only - does not enforce company-wide conservation across plants">Preview All Plant Mixes</button>
+      <button class="btn btn-mute" id="resetAllBtn">Reset to source data</button>
       <button class="btn btn-gold" id="serverOptimizeBtn" type="button" title="The only authoritative optimizer - solves the full portfolio with Google OR-Tools on the FastAPI backend">Optimize Allocation (OR-Tools)</button>
       <button class="btn btn-ghost" id="diversionCalcOpenBtn" type="button" title="Evaluate actual/manual rake diversions - independent of the OR-Tools optimizer">Actual Diversion Calculator</button>
     </div>
@@ -538,15 +622,15 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 </div>
 
 <div class="flow" role="presentation">
-  <div class="flow-node"><b>1 &middot; Coal Sources</b><span>GCV / rate / freight / SCC / APC</span></div>
+  <div class="flow-node"><b>1 &middot; Coal Sources</b><span>GCV / rate / freight / SCC / APC</span><button class="help-btn help-icon" data-help="flow-1" aria-label="Explain: Coal Sources" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Coal Sources</span></button></div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>2 &middot; Rakes</b><span>whole-number availability per plant</span></div>
+  <div class="flow-node"><b>2 &middot; Rakes</b><span>whole-number availability per plant</span><button class="help-btn help-icon" data-help="flow-2" aria-label="Explain: Rakes" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Rakes</span></button></div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>3 &middot; Plant Allocation</b><span>min/max share caps per source</span></div>
+  <div class="flow-node"><b>3 &middot; Plant Allocation</b><span>min/max share caps per source</span><button class="help-btn help-icon" data-help="flow-3" aria-label="Explain: Plant Allocation" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Plant Allocation</span></button></div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>4 &middot; RSD / VC Optimization</b><span>OR-Tools targets &amp;&nbsp;conservation</span></div>
+  <div class="flow-node"><b>4 &middot; RSD / VC Optimization</b><span>OR-Tools targets &amp;&nbsp;conservation</span><button class="help-btn help-icon" data-help="flow-4" aria-label="Explain: RSD / VC Optimization" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: RSD / VC Optimization</span></button></div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>5 &middot; Final Allocation</b><span>whole rakes &middot; target check</span></div>
+  <div class="flow-node"><b>5 &middot; Final Allocation</b><span>whole rakes &middot; target check</span><button class="help-btn help-icon" data-help="flow-5" aria-label="Explain: Final Allocation" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Final Allocation</span></button></div>
 </div>
 
 <!-- FEATURE 3: Portfolio Rake Distribution. Populated ONLY from a
@@ -559,7 +643,7 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   <div class="panel">
     <div class="panel-head">
       <div>
-        <h2>Portfolio Rake Distribution</h2>
+        <h2>Portfolio Rake Distribution <button class="help-btn" data-help="portfolio-table" aria-label="Explain: Portfolio Rake Distribution" aria-expanded="false" type="button">? Explain</button></h2>
         <div style="font-size:11px;color:var(--steel);margin-top:3px;">Official OR-Tools Allocation &mdash; All Plants</div>
       </div>
     </div>
@@ -570,7 +654,7 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
          below; both this and the table are cleared together by the shared
          invalidateOfficialResult(). -->
     <div id="optimizationSummarySection" style="margin:14px 0 22px;">
-      <div class="section-label">Optimization Summary</div>
+      <div class="section-label">Optimization Summary <button class="help-btn" data-help="summary" aria-label="Explain: Optimization Summary" aria-expanded="false" type="button">? Explain</button></div>
       <div style="font-size:11px;color:var(--steel);margin-top:2px;margin-bottom:8px;">Official OR-Tools Portfolio Result</div>
       <div id="optimizationSummaryEmpty" class="remark-note" style="margin-top:0;">
         Run <b>&ldquo;Optimize Allocation (OR-Tools)&rdquo;</b> to view the official portfolio summary.
@@ -1175,6 +1259,108 @@ function flashButton(id, successText, failText, ok){
   }, 1300);
 }
 
+// ---------- "Explain This" flash cards (reusable help system) ----------
+// One delegated listener powers every [data-help] button. The popover is
+// placed beside its anchor, clamped to the viewport, relocated while the
+// anchor stays on screen, and closed on outside click, Escape, or when the
+// anchor scrolls out of view. Icons resolve lazily from global ICON_*
+// constants so this block may live anywhere in the script.
+const HELP_LIB = {
+  'kpi-current': {num:null, icon:'gauge', title:'Portfolio Avg VC', text:"Shows the average Variable Charge across all plants. Lower is better because it means cheaper coal allocation."},
+  'kpi-preview': {num:null, icon:'trend', title:'Preview Mix', text:"This is a quick estimate created in the browser. Use \u201cOptimize Allocation (OR-Tools)\u201d for the official allocation result."},
+  'kpi-target':  {num:null, icon:'target', title:'Plants at Target', text:"Counts how many plants are at or under the target ceiling with the preview mix. The official result may differ."},
+  'kpi-rakes':   {num:null, icon:'train', title:'Rakes Reallocated', text:"Shows how many whole coal rakes are moved between plants to improve the overall allocation."},
+  'vc-compare':  {num:null, icon:'gauge', title:'Plant VC Comparison', text:"Compare the current cost, optimized preview cost, and target cost for this plant."},
+  'src-delta':   {num:null, icon:'trend', title:'Source Allocation', text:"Current vs preview rakes per coal source. Rakes stay whole and the plant total is conserved."},
+  'summary':     {num:null, icon:'target', title:'Optimization Summary', text:"Official portfolio result from OR-Tools: plants meeting target, average VC change, and exceptions needing attention."},
+  'portfolio-table': {num:null, icon:'train', title:'Portfolio Rake Distribution', text:"Consolidated official allocation across all plants: which source feeds which plant, and how many rakes move."},
+  'flow-1': {num:'1', icon:null, title:'Coal Sources', text:"Enter the quality and cost details of each available coal source."},
+  'flow-2': {num:'2', icon:null, title:'Rakes', text:"Set how many whole rakes are available for each plant."},
+  'flow-3': {num:'3', icon:null, title:'Plant Allocation', text:"Define the minimum and maximum rakes each plant can receive from each source."},
+  'flow-4': {num:'4', icon:null, title:'RSD / VC Optimization', text:"The optimizer first checks operational targets, then finds a lower-cost allocation."},
+  'flow-5': {num:'5', icon:null, title:'Final Allocation', text:"Review the final whole-rake allocation and verify that all constraints are satisfied."},
+};
+const HELP_ICONS = {gauge:()=>ICON_GAUGE, trend:()=>ICON_TREND, target:()=>ICON_TARGET, train:()=>ICON_TRAIN};
+
+let flashAnchor = null;
+function openFlash(btn){
+  closeFlash();
+  const entry = HELP_LIB[btn.dataset.help];
+  if(!entry) return;
+  const card = document.createElement('div');
+  card.className = 'flash-card';
+  card.setAttribute('role','dialog');
+  card.setAttribute('aria-label', entry.title);
+  const iconHtml = entry.num
+    ? `<span class="fc-num" aria-hidden="true">${entry.num}</span>`
+    : `<span class="fc-icon" aria-hidden="true">${(HELP_ICONS[entry.icon]&&HELP_ICONS[entry.icon]())||'&#9432;'}</span>`;
+  card.innerHTML = `<div class="fc-head">${iconHtml}<h4>${entry.title}</h4></div><div class="fc-text">${entry.text}</div>`;
+  document.body.appendChild(card);
+  flashAnchor = btn;
+  btn.setAttribute('aria-expanded','true');
+  positionFlashCard(card, btn);
+}
+function positionFlashCard(card, btn){
+  const r = btn.getBoundingClientRect();
+  const m = 12;
+  const vw = window.innerWidth || document.documentElement.clientWidth;
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+  let left = Math.min(r.right - cw, vw - m - cw);
+  left = Math.max(m, left);
+  let top = r.bottom + m;
+  let flipped = false;
+  if(top + ch > vh - m){
+    top = r.top - m - ch;
+    flipped = true;
+    if(top < m){ top = Math.max(m, r.bottom + m); flipped = false; }
+  }
+  card.style.left = left+'px';
+  card.style.top = top+'px';
+  if(!flipped && top + ch > vh - m){
+    card.style.maxHeight = Math.max(120, vh - m - top)+'px';
+    card.style.overflowY = 'auto';
+  } else {
+    card.style.maxHeight = '';
+    card.style.overflowY = 'visible';
+  }
+}
+function repositionFlashCard(){
+  const card = document.getElementById('flashCard');
+  if(!card || !flashAnchor) return;
+  const r = flashAnchor.getBoundingClientRect();
+  if(r.bottom < 0 || r.left > (window.innerWidth||0) || r.right < 0 || r.top > (window.innerHeight||0)){
+    closeFlash();
+    return;
+  }
+  positionFlashCard(card, flashAnchor);
+}
+function closeFlash(returnFocus){
+  const card = document.getElementById('flashCard');
+  if(card) card.remove();
+  if(flashAnchor){
+    flashAnchor.setAttribute('aria-expanded','false');
+    if(returnFocus && document.activeElement !== flashAnchor) flashAnchor.focus();
+  }
+  flashAnchor = null;
+}
+document.addEventListener('click', e=>{
+  const btn = e.target.closest('.help-btn');
+  if(btn){
+    e.stopPropagation();
+    e.preventDefault();
+    if(flashAnchor === btn) closeFlash(true);
+    else { openFlash(btn); btn.focus(); }
+    return;
+  }
+  if(!e.target.closest('.flash-card')) closeFlash();
+});
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape') closeFlash(true);
+});
+window.addEventListener('resize', repositionFlashCard);
+window.addEventListener('scroll', repositionFlashCard, true);
+
 // ---------- formatting ----------
 const fmt2 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(4);
 const fmt1 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(1);
@@ -1354,31 +1540,43 @@ function renderKPI(){
     <div class="kpi-card">
       <div class="kpi-top">
         <div class="kpi-label">Portfolio avg VC &middot; current mix</div>
-        <span class="kpi-icon" aria-hidden="true">${ICON_GAUGE}</span>
+        <div class="kpi-top-action">
+          <button class="help-btn help-icon" data-help="kpi-current" aria-label="Explain: Portfolio avg VC" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Portfolio avg VC</span></button>
+          <span class="kpi-icon" title="Weighted average VC of the current rake mix" aria-hidden="true">${ICON_GAUGE}</span>
+        </div>
       </div>
       <div class="kpi-value"><span class="kpi-num" data-v="avgCur" data-dec="4">${fmt2(avgCur)}</span><small>/unit</small></div>
       <div class="kpi-delta neutral"><span class="delta-chip">&asymp;</span>weighted across all plants</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-top">
-        <div class="kpi-label">Portfolio avg VC &middot; preview <span class="badge na" style="margin-top:0;">client-side</span></div>
-        <span class="kpi-icon" aria-hidden="true">${ICON_TREND}</span>
+        <div class="kpi-label">Portfolio avg VC &middot; preview <span class="inline-tag warn">client-side</span></div>
+        <div class="kpi-top-action">
+          <button class="help-btn help-icon" data-help="kpi-preview" aria-label="Explain: Preview mix" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Preview mix</span></button>
+          <span class="kpi-icon" title="In-browser estimate - use OR-Tools for the official result" aria-hidden="true">${ICON_TREND}</span>
+        </div>
       </div>
       <div class="kpi-value"><span class="kpi-num" data-v="avgOpt" data-dec="4">${fmt2(avgOpt)}</span><small>/unit</small></div>
       <div class="kpi-delta ${delta<=0?'pos':'neg'}"><span class="delta-chip">${delta<=0?'&#9660;':'&#9650;'} ${fmt2(Math.abs(delta))}</span>vs current mix</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-top">
-        <div class="kpi-label">Plants at target <span class="badge na" style="margin-top:0;">preview</span></div>
-        <span class="kpi-icon" aria-hidden="true">${ICON_TARGET}</span>
+        <div class="kpi-label">Plants at target <span class="inline-tag">preview</span></div>
+        <div class="kpi-top-action">
+          <button class="help-btn help-icon" data-help="kpi-target" aria-label="Explain: Plants at target" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Plants at target</span></button>
+          <span class="kpi-icon" title="Plants whose preview mix is at or under the target ceiling" aria-hidden="true">${ICON_TARGET}</span>
+        </div>
       </div>
       <div class="kpi-value"><span class="kpi-num" data-v="metAfter" data-dec="0">${metAfter}</span><small>/${state.length}</small></div>
       <div class="kpi-delta ${metAfter-metBefore>0?'pos':(metAfter-metBefore<0?'neg':'neutral')}"><span class="delta-chip">${metAfter-metBefore>0?'+':''}${metAfter-metBefore}</span>vs ${metBefore} before</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-top">
-        <div class="kpi-label">Rakes reallocated / month <span class="badge na" style="margin-top:0;">preview</span></div>
-        <span class="kpi-icon" aria-hidden="true">${ICON_TRAIN}</span>
+        <div class="kpi-label">Rakes reallocated / month <span class="inline-tag">preview</span></div>
+        <div class="kpi-top-action">
+          <button class="help-btn help-icon" data-help="kpi-rakes" aria-label="Explain: Rakes reallocated" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Rakes reallocated</span></button>
+          <span class="kpi-icon" title="Whole coal rakes moved between plants by the preview mix" aria-hidden="true">${ICON_TRAIN}</span>
+        </div>
       </div>
       <div class="kpi-value"><span class="kpi-num" data-v="rakesShifted" data-dec="0">${fmtRakes(rakesShifted)}</span><small>rakes</small></div>
       <div class="kpi-delta neutral"><span class="delta-chip">&#8635;</span>whole rakes &middot; per plant</div>
@@ -1464,7 +1662,7 @@ function renderPanel(){
     : (opt<=globalTarget ? 'vcb-opt good' : 'vcb-opt high');
   const vcCompareHtml = `
       <div class="vc-compare">
-        <div class="section-label" style="margin:0 0 14px;">Plant VC comparison</div>
+        <div class="section-label">Plant VC comparison <button class="help-btn" data-help="vc-compare" aria-label="Explain: Plant VC comparison" aria-expanded="false" type="button">? Explain</button></div>
         ${vcbRow('Current mix', cur, 'vcb-cur')}
         ${vcbRow('Preview mix', opt, previewBarCls, '<span class="badge na" style="margin-left:6px;margin-top:0;">client-side</span>')}
         ${vcbRow('Target ceiling', globalTarget, 'vcb-tgt')}
@@ -1503,7 +1701,7 @@ function renderPanel(){
       }).join('');
   const srcDeltaHtml = `
       <div class="src-delta">
-        <div class="section-label" style="margin:2px 0 12px;">Source allocation &middot; current vs preview</div>
+        <div class="section-label">Source allocation &middot; current vs preview <button class="help-btn" data-help="src-delta" aria-label="Explain: Source allocation" aria-expanded="false" type="button">? Explain</button></div>
         ${sdRows}
         <div class="sd-legend">
           <span><i class="cur"></i>Current rakes</span>
@@ -1542,7 +1740,7 @@ function renderPanel(){
         </div>
         <div class="arrow">&#8594;</div>
         <div class="result-item">
-          <div class="rlabel">Preview VC <span class="badge na" style="margin-top:0;">client-side, not official</span></div>
+          <div class="rlabel">Preview VC <span class="inline-tag warn">client-side, not official</span></div>
           <div class="rvalue" style="color:${r.infeasible?'var(--rust)':'var(--green)'}">${r.infeasible?'infeasible':('&#8377;'+fmt2(opt))}</div>
         </div>
         <div class="result-item">
@@ -1565,7 +1763,7 @@ function renderPanel(){
         </div>
         <div class="train-gap"><span class="tg-line"></span><span>preview applies a whole-rake reallocation within this plant</span><span class="tg-line"></span></div>
         <div class="wagons-row">
-          <div class="wagons-label"><span>Preview rake split <span class="badge na" style="margin: -2px 0 0 6px;">client-side, not official</span></span><span class="wl-stats"><span class="wl-stat">${fmtRakes(plant.totalRakes)} rakes</span><span class="wl-stat">${r.infeasible?'&mdash;':('&#8377;'+fmt2(opt)+' /unit')}</span></span></div>
+          <div class="wagons-label"><span class="wl-title">Preview rake split <span class="inline-tag warn">client-side, not official</span></span><span class="wl-stats"><span class="wl-stat">${fmtRakes(plant.totalRakes)} rakes</span><span class="wl-stat">${r.infeasible?'&mdash;':('&#8377;'+fmt2(opt)+' /unit')}</span></span></div>
           <div class="train">${trainOptimized}</div>
           <div class="rails"></div>
         </div>
