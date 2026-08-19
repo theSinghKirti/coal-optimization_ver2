@@ -430,43 +430,64 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 .inline-tag.warn{background:var(--gold-soft);color:var(--gold-deep);}
 .rlabel .inline-tag, .wagons-label .inline-tag, .section-label .inline-tag{vertical-align:2px;}
 
-/* ===== "Explain This" help system ===== */
-.help-btn{
-  font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.02em;
-  color:var(--steel);background:#F2F5F7;border:1px solid var(--line);border-radius:20px;
-  padding:3px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
-  transition:background-color .12s ease, border-color .12s ease, color .12s ease, transform .08s ease;
+/* ===== Official result summary (rendered after POST /optimize) ===== */
+.opt-banner{
+  display:flex;gap:14px;align-items:flex-start;
+  background:#F2F7F4;border:1px solid #CFE0D6;border-left:4px solid var(--green);
+  border-radius:var(--radius-lg);padding:16px 18px;box-shadow:var(--shadow-sm);
+  margin-top:10px;
 }
-.help-btn:hover{background:var(--gold-soft);border-color:#E3CF93;color:var(--gold-deep);}
-.help-btn:active{transform:translateY(1px);}
-.help-btn.help-icon{width:22px;height:22px;padding:0;border-radius:50%;justify-content:center;font-size:12px;line-height:1;flex-shrink:0;}
-.help-btn[aria-expanded="true"]{background:var(--navy);border-color:var(--navy);color:#fff;}
-.kpi-top-action{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;}
-.section-label .help-btn{margin-left:auto;}
-.sr-only{
-  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
-  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+.opt-banner.warn{background:#FBF6EA;border-color:#E7D9AE;border-left-color:var(--gold-deep);}
+.opt-banner .ob-icon{
+  flex-shrink:0;width:34px;height:34px;border-radius:9px;background:var(--green);color:#fff;
+  display:grid;place-items:center;font-size:17px;font-weight:700;line-height:1;
 }
-.flash-card{
-  position:fixed;z-index:130;width:290px;max-width:calc(100vw - 24px);
-  background:#fff;border:1px solid var(--line);border-radius:12px;
-  box-shadow:var(--shadow-pop);padding:14px 16px;
-  animation:flashIn .16s ease-out;
+.opt-banner .ob-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.opt-banner .ob-title{font-size:16px;font-weight:700;color:var(--navy);}
+.opt-banner .ob-text{font-size:12.5px;color:var(--steel);line-height:1.6;margin-top:4px;}
+.opt-banner .ob-text b{color:var(--navy);font-weight:600;}
+
+.opt-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:16px;}
+.om-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:12px 14px;box-shadow:var(--shadow-sm);min-width:0;
 }
-@keyframes flashIn{from{opacity:0;transform:translateY(5px) scale(.98);}to{opacity:1;transform:none;}}
-.flash-card .fc-head{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
-.flash-card .fc-icon{
-  flex-shrink:0;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
-  background:var(--navy);color:var(--gold);font-size:12px;
+.om-card .om-label{
+  font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--steel);
+  font-weight:600;line-height:1.45;overflow-wrap:anywhere;
 }
-.flash-card .fc-icon svg{width:14px;height:14px;}
-.flash-card .fc-num{
-  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;
-  background:var(--gold-soft);color:var(--gold-deep);border-radius:6px;
-  width:22px;height:22px;display:grid;place-items:center;margin-right:2px;
+.om-card .om-value{
+  font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;color:var(--navy);
+  margin-top:6px;line-height:1.15;white-space:nowrap;
 }
-.flash-card h4{font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:700;color:var(--navy);margin:0;}
-.flash-card .fc-text{font-size:12px;color:var(--steel);line-height:1.6;}
+.om-card .om-value small{font-size:11px;font-weight:500;color:var(--steel);}
+
+.key-changes{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px;}
+.key-changes li{
+  display:flex;gap:10px;align-items:flex-start;
+  font-size:12.5px;color:var(--steel);line-height:1.55;
+  padding:8px 12px;background:#FAFBFD;border:1px solid var(--line-soft);border-radius:8px;
+}
+.key-changes li::before{
+  content:"";width:6px;height:6px;border-radius:50%;background:var(--gold);
+  margin-top:6px;flex-shrink:0;
+}
+
+.plant-results{display:grid;gap:8px;margin-top:6px;}
+.pr-row{
+  display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;
+  padding:10px 14px;border:1px solid var(--line-soft);border-radius:10px;background:#FBFCFD;
+}
+.pr-row .pr-name{font-weight:600;font-size:12.5px;color:var(--navy);min-width:180px;flex:1 1 160px;}
+.pr-row .pr-text{font-size:12px;color:var(--steel);flex:2 1 280px;min-width:0;line-height:1.55;}
+.pstat{
+  display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;
+  letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap;
+}
+.pstat.ok{background:var(--green-soft);color:var(--green);}
+.pstat.imp{background:#F2F5F7;color:var(--steel);}
+.pstat.warn{background:var(--rust-soft);color:var(--rust);}
+.pstat.flat{background:#EAEDF0;color:var(--steel);}
 
 /* ===== Positional fixes / visual hierarchy refinements ===== */
 .kpi-top{flex-wrap:nowrap;}
@@ -489,6 +510,7 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .topbar-controls{justify-content:flex-start;}
   .vcb{grid-template-columns:118px minmax(0,1fr) 132px;}
   .sd-row{grid-template-columns:150px minmax(0,1fr) 188px;}
+  .opt-metrics{grid-template-columns:repeat(3,minmax(0,1fr));}
 }
 
 /* Tablet / below 1024: workflow wraps in a clean 3+2 grid, tabs scroll, charts compact */
@@ -518,6 +540,8 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .kpi-icon{width:30px;height:30px;}
   .panel-actions{width:100%;justify-content:flex-start;}
   .panel-head{gap:14px;}
+  .opt-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .opt-banner{flex-direction:column;gap:10px;}
 }
 
 /* ---------- Phone ---------- */
@@ -573,7 +597,6 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .wl-stats{gap:6px;}
   .train-gap{display:none;}
   .tab .tab-caret{display:none;}
-  .flash-card{width:min(290px,calc(100vw - 24px));}
 }
 
 /* Small phones / below 480: KPI 1-up, single-column workflow */
@@ -582,6 +605,8 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .tab{min-width:150px;}
   table.src{min-width:600px;}
   .flow-node{flex-basis:100%;}
+  .opt-metrics{grid-template-columns:1fr;}
+  .pr-row{flex-direction:column;gap:6px;align-items:flex-start;}
 }
 </style>
 </head>
@@ -622,15 +647,15 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 </div>
 
 <div class="flow" role="presentation">
-  <div class="flow-node"><b>1 &middot; Coal Sources</b><span>GCV / rate / freight / SCC / APC</span><button class="help-btn help-icon" data-help="flow-1" aria-label="Explain: Coal Sources" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Coal Sources</span></button></div>
+  <div class="flow-node"><b>1 &middot; Coal Sources</b><span>GCV / rate / freight / SCC / APC</span></div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>2 &middot; Rakes</b><span>whole-number availability per plant</span><button class="help-btn help-icon" data-help="flow-2" aria-label="Explain: Rakes" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Rakes</span></button></div>
+  <div class="flow-node"><b>2 &middot; Rakes</b><span>whole-number availability per plant</span></div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>3 &middot; Plant Allocation</b><span>min/max share caps per source</span><button class="help-btn help-icon" data-help="flow-3" aria-label="Explain: Plant Allocation" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Plant Allocation</span></button></div>
+  <div class="flow-node"><b>3 &middot; Plant Allocation</b><span>min/max share caps per source</span></div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>4 &middot; RSD / VC Optimization</b><span>OR-Tools targets &amp;&nbsp;conservation</span><button class="help-btn help-icon" data-help="flow-4" aria-label="Explain: RSD / VC Optimization" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: RSD / VC Optimization</span></button></div>
+  <div class="flow-node"><b>4 &middot; RSD / VC Optimization</b><span>OR-Tools targets &amp;&nbsp;conservation</span></div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>5 &middot; Final Allocation</b><span>whole rakes &middot; target check</span><button class="help-btn help-icon" data-help="flow-5" aria-label="Explain: Final Allocation" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Final Allocation</span></button></div>
+  <div class="flow-node"><b>5 &middot; Final Allocation</b><span>whole rakes &middot; target check</span></div>
 </div>
 
 <!-- FEATURE 3: Portfolio Rake Distribution. Populated ONLY from a
@@ -643,7 +668,7 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   <div class="panel">
     <div class="panel-head">
       <div>
-        <h2>Portfolio Rake Distribution <button class="help-btn" data-help="portfolio-table" aria-label="Explain: Portfolio Rake Distribution" aria-expanded="false" type="button">? Explain</button></h2>
+        <h2>Portfolio Rake Distribution</h2>
         <div style="font-size:11px;color:var(--steel);margin-top:3px;">Official OR-Tools Allocation &mdash; All Plants</div>
       </div>
     </div>
@@ -654,7 +679,7 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
          below; both this and the table are cleared together by the shared
          invalidateOfficialResult(). -->
     <div id="optimizationSummarySection" style="margin:14px 0 22px;">
-      <div class="section-label">Optimization Summary <button class="help-btn" data-help="summary" aria-label="Explain: Optimization Summary" aria-expanded="false" type="button">? Explain</button></div>
+      <div class="section-label">Optimization Summary</div>
       <div style="font-size:11px;color:var(--steel);margin-top:2px;margin-bottom:8px;">Official OR-Tools Portfolio Result</div>
       <div id="optimizationSummaryEmpty" class="remark-note" style="margin-top:0;">
         Run <b>&ldquo;Optimize Allocation (OR-Tools)&rdquo;</b> to view the official portfolio summary.
@@ -1228,108 +1253,6 @@ function flashButton(id, successText, failText, ok){
   }, 1300);
 }
 
-// ---------- "Explain This" flash cards (reusable help system) ----------
-// One delegated listener powers every [data-help] button. The popover is
-// placed beside its anchor, clamped to the viewport, relocated while the
-// anchor stays on screen, and closed on outside click, Escape, or when the
-// anchor scrolls out of view. Icons resolve lazily from global ICON_*
-// constants so this block may live anywhere in the script.
-const HELP_LIB = {
-  'kpi-current': {num:null, icon:'gauge', title:'Portfolio Avg VC', text:"Shows the average Variable Charge across all plants. Lower is better because it means cheaper coal allocation."},
-  'kpi-preview': {num:null, icon:'trend', title:'Preview Mix', text:"This is a quick estimate created in the browser. Use \u201cOptimize Allocation (OR-Tools)\u201d for the official allocation result."},
-  'kpi-target':  {num:null, icon:'target', title:'Plants at Target', text:"Counts how many plants are at or under the target ceiling with the preview mix. The official result may differ."},
-  'kpi-rakes':   {num:null, icon:'train', title:'Rakes Reallocated', text:"Shows how many whole coal rakes are moved between plants to improve the overall allocation."},
-  'vc-compare':  {num:null, icon:'gauge', title:'Plant VC Comparison', text:"Compare the current cost, optimized preview cost, and target cost for this plant."},
-  'src-delta':   {num:null, icon:'trend', title:'Source Allocation', text:"Current vs preview rakes per coal source. Rakes stay whole and the plant total is conserved."},
-  'summary':     {num:null, icon:'target', title:'Optimization Summary', text:"Official portfolio result from OR-Tools: plants meeting target, average VC change, and exceptions needing attention."},
-  'portfolio-table': {num:null, icon:'train', title:'Portfolio Rake Distribution', text:"Consolidated official allocation across all plants: which source feeds which plant, and how many rakes move."},
-  'flow-1': {num:'1', icon:null, title:'Coal Sources', text:"Enter the quality and cost details of each available coal source."},
-  'flow-2': {num:'2', icon:null, title:'Rakes', text:"Set how many whole rakes are available for each plant."},
-  'flow-3': {num:'3', icon:null, title:'Plant Allocation', text:"Define the minimum and maximum rakes each plant can receive from each source."},
-  'flow-4': {num:'4', icon:null, title:'RSD / VC Optimization', text:"The optimizer first checks operational targets, then finds a lower-cost allocation."},
-  'flow-5': {num:'5', icon:null, title:'Final Allocation', text:"Review the final whole-rake allocation and verify that all constraints are satisfied."},
-};
-const HELP_ICONS = {gauge:()=>ICON_GAUGE, trend:()=>ICON_TREND, target:()=>ICON_TARGET, train:()=>ICON_TRAIN};
-
-let flashAnchor = null;
-function openFlash(btn){
-  closeFlash();
-  const entry = HELP_LIB[btn.dataset.help];
-  if(!entry) return;
-  const card = document.createElement('div');
-  card.className = 'flash-card';
-  card.setAttribute('role','dialog');
-  card.setAttribute('aria-label', entry.title);
-  const iconHtml = entry.num
-    ? `<span class="fc-num" aria-hidden="true">${entry.num}</span>`
-    : `<span class="fc-icon" aria-hidden="true">${(HELP_ICONS[entry.icon]&&HELP_ICONS[entry.icon]())||'&#9432;'}</span>`;
-  card.innerHTML = `<div class="fc-head">${iconHtml}<h4>${entry.title}</h4></div><div class="fc-text">${entry.text}</div>`;
-  document.body.appendChild(card);
-  flashAnchor = btn;
-  btn.setAttribute('aria-expanded','true');
-  positionFlashCard(card, btn);
-}
-function positionFlashCard(card, btn){
-  const r = btn.getBoundingClientRect();
-  const m = 12;
-  const vw = window.innerWidth || document.documentElement.clientWidth;
-  const vh = window.innerHeight || document.documentElement.clientHeight;
-  const cw = card.offsetWidth, ch = card.offsetHeight;
-  let left = Math.min(r.right - cw, vw - m - cw);
-  left = Math.max(m, left);
-  let top = r.bottom + m;
-  let flipped = false;
-  if(top + ch > vh - m){
-    top = r.top - m - ch;
-    flipped = true;
-    if(top < m){ top = Math.max(m, r.bottom + m); flipped = false; }
-  }
-  card.style.left = left+'px';
-  card.style.top = top+'px';
-  if(!flipped && top + ch > vh - m){
-    card.style.maxHeight = Math.max(120, vh - m - top)+'px';
-    card.style.overflowY = 'auto';
-  } else {
-    card.style.maxHeight = '';
-    card.style.overflowY = 'visible';
-  }
-}
-function repositionFlashCard(){
-  const card = document.getElementById('flashCard');
-  if(!card || !flashAnchor) return;
-  const r = flashAnchor.getBoundingClientRect();
-  if(r.bottom < 0 || r.left > (window.innerWidth||0) || r.right < 0 || r.top > (window.innerHeight||0)){
-    closeFlash();
-    return;
-  }
-  positionFlashCard(card, flashAnchor);
-}
-function closeFlash(returnFocus){
-  const card = document.getElementById('flashCard');
-  if(card) card.remove();
-  if(flashAnchor){
-    flashAnchor.setAttribute('aria-expanded','false');
-    if(returnFocus && document.activeElement !== flashAnchor) flashAnchor.focus();
-  }
-  flashAnchor = null;
-}
-document.addEventListener('click', e=>{
-  const btn = e.target.closest('.help-btn');
-  if(btn){
-    e.stopPropagation();
-    e.preventDefault();
-    if(flashAnchor === btn) closeFlash(true);
-    else { openFlash(btn); btn.focus(); }
-    return;
-  }
-  if(!e.target.closest('.flash-card')) closeFlash();
-});
-document.addEventListener('keydown', e=>{
-  if(e.key === 'Escape') closeFlash(true);
-});
-window.addEventListener('resize', repositionFlashCard);
-window.addEventListener('scroll', repositionFlashCard, true);
-
 // ---------- formatting ----------
 const fmt2 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(4);
 const fmt1 = n => (n===null||n===undefined||isNaN(n)) ? '&mdash;' : n.toFixed(1);
@@ -1509,10 +1432,7 @@ function renderKPI(){
     <div class="kpi-card">
       <div class="kpi-top">
         <div class="kpi-label">Portfolio avg VC &middot; current mix</div>
-        <div class="kpi-top-action">
-          <button class="help-btn help-icon" data-help="kpi-current" aria-label="Explain: Portfolio avg VC" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Portfolio avg VC</span></button>
-          <span class="kpi-icon" title="Weighted average VC of the current rake mix" aria-hidden="true">${ICON_GAUGE}</span>
-        </div>
+        <span class="kpi-icon" title="Weighted average VC of the current rake mix" aria-hidden="true">${ICON_GAUGE}</span>
       </div>
       <div class="kpi-value"><span class="kpi-num" data-v="avgCur" data-dec="4">${fmt2(avgCur)}</span><small>/unit</small></div>
       <div class="kpi-delta neutral"><span class="delta-chip">&asymp;</span>weighted across all plants</div>
@@ -1520,10 +1440,7 @@ function renderKPI(){
     <div class="kpi-card">
       <div class="kpi-top">
         <div class="kpi-label">Portfolio avg VC &middot; preview <span class="inline-tag warn">client-side</span></div>
-        <div class="kpi-top-action">
-          <button class="help-btn help-icon" data-help="kpi-preview" aria-label="Explain: Preview mix" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Preview mix</span></button>
-          <span class="kpi-icon" title="In-browser estimate - use OR-Tools for the official result" aria-hidden="true">${ICON_TREND}</span>
-        </div>
+        <span class="kpi-icon" title="In-browser estimate - use OR-Tools for the official result" aria-hidden="true">${ICON_TREND}</span>
       </div>
       <div class="kpi-value"><span class="kpi-num" data-v="avgOpt" data-dec="4">${fmt2(avgOpt)}</span><small>/unit</small></div>
       <div class="kpi-delta ${delta<=0?'pos':'neg'}"><span class="delta-chip">${delta<=0?'&#9660;':'&#9650;'} ${fmt2(Math.abs(delta))}</span>vs current mix</div>
@@ -1531,10 +1448,7 @@ function renderKPI(){
     <div class="kpi-card">
       <div class="kpi-top">
         <div class="kpi-label">Plants at target <span class="inline-tag">preview</span></div>
-        <div class="kpi-top-action">
-          <button class="help-btn help-icon" data-help="kpi-target" aria-label="Explain: Plants at target" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Plants at target</span></button>
-          <span class="kpi-icon" title="Plants whose preview mix is at or under the target ceiling" aria-hidden="true">${ICON_TARGET}</span>
-        </div>
+        <span class="kpi-icon" title="Plants whose preview mix is at or under the target ceiling" aria-hidden="true">${ICON_TARGET}</span>
       </div>
       <div class="kpi-value"><span class="kpi-num" data-v="metAfter" data-dec="0">${metAfter}</span><small>/${state.length}</small></div>
       <div class="kpi-delta ${metAfter-metBefore>0?'pos':(metAfter-metBefore<0?'neg':'neutral')}"><span class="delta-chip">${metAfter-metBefore>0?'+':''}${metAfter-metBefore}</span>vs ${metBefore} before</div>
@@ -1542,10 +1456,7 @@ function renderKPI(){
     <div class="kpi-card">
       <div class="kpi-top">
         <div class="kpi-label">Rakes reallocated / month <span class="inline-tag">preview</span></div>
-        <div class="kpi-top-action">
-          <button class="help-btn help-icon" data-help="kpi-rakes" aria-label="Explain: Rakes reallocated" aria-expanded="false" type="button"><span aria-hidden="true">?</span><span class="sr-only">Explain: Rakes reallocated</span></button>
-          <span class="kpi-icon" title="Whole coal rakes moved between plants by the preview mix" aria-hidden="true">${ICON_TRAIN}</span>
-        </div>
+        <span class="kpi-icon" title="Whole coal rakes moved between plants by the preview mix" aria-hidden="true">${ICON_TRAIN}</span>
       </div>
       <div class="kpi-value"><span class="kpi-num" data-v="rakesShifted" data-dec="0">${fmtRakes(rakesShifted)}</span><small>rakes</small></div>
       <div class="kpi-delta neutral"><span class="delta-chip">&#8635;</span>whole rakes &middot; per plant</div>
@@ -1631,7 +1542,7 @@ function renderPanel(){
     : (opt<=globalTarget ? 'vcb-opt good' : 'vcb-opt high');
   const vcCompareHtml = `
       <div class="vc-compare">
-        <div class="section-label">Plant VC comparison <button class="help-btn" data-help="vc-compare" aria-label="Explain: Plant VC comparison" aria-expanded="false" type="button">? Explain</button></div>
+        <div class="section-label">Plant VC comparison</div>
         ${vcbRow('Current mix', cur, 'vcb-cur')}
         ${vcbRow('Preview mix', opt, previewBarCls, '<span class="badge na" style="margin-left:6px;margin-top:0;">client-side</span>')}
         ${vcbRow('Target ceiling', globalTarget, 'vcb-tgt')}
@@ -1670,7 +1581,7 @@ function renderPanel(){
       }).join('');
   const srcDeltaHtml = `
       <div class="src-delta">
-        <div class="section-label">Source allocation &middot; current vs preview <button class="help-btn" data-help="src-delta" aria-label="Explain: Source allocation" aria-expanded="false" type="button">? Explain</button></div>
+        <div class="section-label">Source allocation &middot; current vs preview</div>
         ${sdRows}
         <div class="sd-legend">
           <span><i class="cur"></i>Current rakes</span>
@@ -1691,7 +1602,7 @@ function renderPanel(){
         <div class="panel-actions">
           <label class="ctl-label">
             RSD Threshold (VC)
-            <input class="cell-input" style="width:75px" type="number" step="0.0001" min="0" id="rsdThresholdInput" value="${plant.rsd_threshold !== undefined && plant.rsd_threshold !== null ? plant.rsd_threshold.toFixed(4) : ''}" placeholder="None">
+            <input class="cell-input" style="width:75px" type="number" step="0.0001" min="0" id="rsdThresholdInput" value="${plant.rsd_threshold !== undefined && plant.rsd_threshold !== null ? plant.rsd_threshold.toFixed(4) : ''}" placeholder="None" title="This plant's VC must stay at or below this value. Leave empty for no constraint - the official OR-Tools run respects it.">
           </label>
           <label class="ctl-label">
             Total current rakes
@@ -1909,6 +1820,76 @@ function buildOptimizePayload(){
   };
 }
 
+// Official-target view of a plant: its own RSD threshold when configured,
+// otherwise the portfolio target ceiling.
+function effectiveTargetFor(p){
+  return (p.rsd_threshold_vc !== null && p.rsd_threshold_vc !== undefined) ? p.rsd_threshold_vc : globalTarget;
+}
+
+// Portfolio-level headline numbers, all derived from the real /optimize
+// response - never from the client-side preview optimizer.
+function officialMetrics(result){
+  const plants = result.plants || [];
+  const allocs = result.allocations || [];
+  const before = result.weighted_vc_before;
+  const after = result.weighted_vc_after;
+  const improvement = (result.vc_improvement !== null && result.vc_improvement !== undefined)
+    ? result.vc_improvement : (before !== null && after !== null ? before - after : 0);
+  let metBefore = 0, metAfter = 0;
+  plants.forEach(p=>{
+    const t = effectiveTargetFor(p);
+    if(p.current_vc !== null && p.current_vc !== undefined && !isNaN(p.current_vc) && p.current_vc <= t) metBefore++;
+    if(p.optimized_vc !== null && p.optimized_vc !== undefined && !isNaN(p.optimized_vc) && p.optimized_vc <= t) metAfter++;
+  });
+  let rakesMoved = 0;
+  allocs.forEach(a=>{
+    const d = (a.delta_rakes !== undefined && a.delta_rakes !== null)
+      ? a.delta_rakes : ((a.optimized_rakes||0) - (a.current_rakes||0));
+    rakesMoved += Math.abs(d);
+  });
+  if(!allocs.length){
+    plants.forEach(p=>{ rakesMoved += Math.abs((p.optimized_rakes||0) - (p.current_rakes||0)); });
+  }
+  let constraintsKept = true;
+  (result.constraint_status||[]).forEach(c=>{ if(c.satisfied === false) constraintsKept = false; });
+  return {before, after, improvement, metBefore, metAfter, rakesMoved, constraintsKept, total: plants.length};
+}
+
+// Plain-language outcome for one plant in the official result.
+function plantOutcome(p, target){
+  const cur = p.current_vc, opt = p.optimized_vc;
+  const optOk = opt !== null && opt !== undefined && !isNaN(opt);
+  const curOk = cur !== null && cur !== undefined && !isNaN(cur);
+  const tOk = target !== null && target !== undefined && !isNaN(target);
+  const above = optOk && tOk && opt > target;
+  const d = (curOk && optOk) ? (opt - cur) : null;
+  const moving = d !== null && Math.abs(d) > 0.002;
+  const over = (optOk && tOk) ? (opt - target) : null;
+  if(!optOk){
+    return {cls:'flat', icon:'\u2022', head:'No data', text:'Optimized VC is unavailable for this plant.'};
+  }
+  if(p.rsd_status === 'rsd' && p.optimized_rakes === 0){
+    return {cls:'warn', icon:'\u26A0', head:'Excluded from allocation',
+      text:'The plant could not meet its RSD threshold within the configured caps, so it was not assigned rakes.'};
+  }
+  const tTxt = tOk ? target.toFixed(4) : '\u2014';
+  if(!above){
+    return moving
+      ? {cls:'ok', icon:'\u2713', head:'Target achieved', text:`VC is now \u20B9${opt.toFixed(4)}/unit, below the target of \u20B9${tTxt}/unit.`}
+      : {cls:'flat', icon:'\u2022', head:'Already at target', text:`VC stays at \u20B9${opt.toFixed(4)}/unit, within the target of \u20B9${tTxt}/unit \u2014 no reallocation was needed.`};
+  }
+  if(!moving){
+    return {cls:'warn', icon:'\u26A0', head:'Still above target',
+      text:`VC remains at \u20B9${opt.toFixed(4)}/unit, \u20B9${over.toFixed(4)} above the target \u2014 the configured source caps prevent a lower mix.`};
+  }
+  if(d < 0){
+    return {cls:'imp', icon:'\u2197', head:'Improved, still above target',
+      text:`VC improved from \u20B9${cur.toFixed(4)} to \u20B9${opt.toFixed(4)}/unit but remains \u20B9${over.toFixed(4)} above the target.`};
+  }
+  return {cls:'warn', icon:'\u26A0', head:'Still above target',
+    text:`VC rose from \u20B9${cur.toFixed(4)} to \u20B9${opt.toFixed(4)}/unit \u2014 \u20B9${over.toFixed(4)} above the target.`};
+}
+
 function renderServerOptimizeResult(result){
   const wrap = document.getElementById('serverOptimizeWrap');
   const body = document.getElementById('serverOptimizeBody');
@@ -1933,10 +1914,6 @@ function renderServerOptimizeResult(result){
 
   const statusBadgeClass = result.status === 'Optimal' ? 'ok' : 'na';
   heading.innerHTML = `Official Optimization Result <span class="badge ${statusBadgeClass}">${result.status}</span>`;
-
-  const before = result.weighted_vc_before;
-  const after = result.weighted_vc_after;
-  const improvement = result.vc_improvement!==null&&result.vc_improvement!==undefined ? result.vc_improvement : (before - after);
 
   const plantRows = (result.plants||[]).map(p => {
     const statePlant = state.find(pl => pl.name === p.plant);
@@ -1987,26 +1964,105 @@ function renderServerOptimizeResult(result){
   const thresholdCount = state.filter(pl => pl.rsd_threshold !== null && pl.rsd_threshold !== undefined).length;
   const shutdownsBadgeClass = result.total_shutdowns > 0 ? 'bad' : 'ok';
 
+  // ---- plain-language result summary (all derived from the response) ----
+  const m = officialMetrics(result);
+  const improved = m.improvement > 0.00005;
+  const worsened = m.improvement < -0.00005;
+  const improvedBy = Math.abs(m.improvement);
+  const plantsAbove = (result.plants||[]).filter(p => {
+    const opt = p.optimized_vc;
+    return opt === null || opt === undefined || isNaN(opt) || opt > effectiveTargetFor(p);
+  });
+
+  const summaryLines = [];
+  if(m.before !== null && m.after !== null){
+    if(improved) summaryLines.push(`Portfolio average VC reduced from <b>\u20B9${m.before.toFixed(4)}/unit</b> to <b>\u20B9${m.after.toFixed(4)}/unit</b>.`);
+    else if(!worsened) summaryLines.push(`Portfolio average VC stayed at <b>\u20B9${m.before.toFixed(4)}/unit</b>.`);
+    else summaryLines.push(`Portfolio average VC rose from <b>\u20B9${m.before.toFixed(4)}/unit</b> to <b>\u20B9${m.after.toFixed(4)}/unit</b>.`);
+  }
+  if(improved) summaryLines.push(`A reduction of <b>\u20B9${improvedBy.toFixed(4)}/unit</b> compared with the current coal mix.`);
+  else if(worsened) summaryLines.push(`An increase of <b>\u20B9${improvedBy.toFixed(4)}/unit</b> compared with the current coal mix.`);
+  summaryLines.push(`<b>${m.metAfter} of ${m.total} plants</b> are now within their configured target ceiling.`);
+  summaryLines.push(m.rakesMoved > 0
+    ? `<b>${fmtRakes(m.rakesMoved)} whole rakes</b> were reallocated between plants to achieve this allocation.`
+    : `<b>No whole rakes</b> needed reallocating \u2014 the current allocation already satisfies the constraints.`);
+  summaryLines.push(improved
+    ? 'The optimizer redistributed available coal rakes while respecting source availability and plant allocation limits to reduce the overall Variable Charge.'
+    : 'The optimizer redistributed available coal rakes while respecting source availability and plant allocation limits to reach the best possible Variable Charge under the configured caps.');
+
+  const keyChanges = [];
+  if(m.total){
+    const extraMet = m.metAfter - m.metBefore;
+    if(extraMet > 0) keyChanges.push(`${extraMet} additional plant${extraMet>1?'s':''} reached their target.`);
+    else if(m.metAfter >= m.total) keyChanges.push(`All ${m.total} plants are now within their target ceiling.`);
+    else keyChanges.push(`${m.metAfter} of ${m.total} plants are within their target ceiling.`);
+  }
+  if(m.rakesMoved > 0) keyChanges.push(`${fmtRakes(m.rakesMoved)} whole rakes were reallocated.`);
+  if(improved) keyChanges.push(`Average portfolio VC decreased by \u20B9${improvedBy.toFixed(4)}/unit.`);
+  else if(worsened) keyChanges.push(`Average portfolio VC increased by \u20B9${improvedBy.toFixed(4)}/unit.`);
+  if(plantsAbove.length === 0){
+    if(m.constraintsKept) keyChanges.push('All source availability and plant allocation constraints were maintained.');
+  } else {
+    keyChanges.push('The target could not be reached for all plants because of the configured rake availability and allocation constraints.');
+  }
+
+  const plantResultRows = (result.plants||[]).map(p => {
+    const statePlant = state.find(pl => pl.name === p.plant);
+    const target = (p.rsd_threshold_vc !== null && p.rsd_threshold_vc !== undefined)
+      ? p.rsd_threshold_vc
+      : (statePlant && statePlant.rsd_threshold !== null && statePlant.rsd_threshold !== undefined
+        ? statePlant.rsd_threshold : globalTarget);
+    const out = plantOutcome(p, target);
+    let rakesNote = '';
+    if(p.current_rakes !== null && p.optimized_rakes !== null){
+      rakesNote = ` &middot; ${fmtRakes(p.optimized_rakes)} rakes (of ${fmtRakes(p.current_rakes)})`;
+    }
+    return `<div class="pr-row">
+      <span class="pr-name">${p.plant}</span>
+      <span class="pstat ${out.cls}">${out.icon} ${out.head}</span>
+      <span class="pr-text">${out.text}${rakesNote}</span>
+    </div>`;
+  }).join('');
+
   body.innerHTML = `
-    <div class="result-strip" style="margin-top:10px;">
-      <div><div class="kpi-label">Weighted Avg VC &mdash; Current</div><div class="kpi-value" style="font-size:20px">${before!==null?'&#8377;'+before.toFixed(4):'&mdash;'}</div></div>
-      <div class="arrow">&#8594;</div>
-      <div><div class="kpi-label">Weighted Avg VC &mdash; After Diversion</div><div class="kpi-value" style="font-size:20px">${after!==null?'&#8377;'+after.toFixed(4):'&mdash;'}</div></div>
-      <div><div class="kpi-label">VC Improvement</div><div class="kpi-value" style="font-size:20px;color:${improvement>=0?'var(--green)':'var(--rust)'}">${improvement>=0?'-':'+'}&#8377;${Math.abs(improvement).toFixed(4)}</div></div>
+    <div class="opt-banner ${improved?'':'warn'}">
+      <div class="ob-icon" aria-hidden="true">${improved?'\u2713':'\u26A0'}</div>
+      <div>
+        <div class="ob-head">
+          <span class="ob-title">Optimization Complete</span>
+          <span class="badge ${statusBadgeClass}" style="margin-top:0;">${result.status}</span>
+          ${result.total_shutdowns>0?`<span class="badge bad" style="margin-top:0;">${result.total_shutdowns} plant${result.total_shutdowns>1?'s':''} excluded from allocation</span>`:''}
+        </div>
+        <div class="ob-text">${summaryLines.join(' ')}</div>
+      </div>
     </div>
 
-    <div style="margin-top:12px; font-weight:600; font-size:13.5px; color:var(--navy); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-      <span>RSD / shutdown plants:</span>
-      <span class="badge ${shutdownsBadgeClass}">${result.total_shutdowns} of ${thresholdCount}</span>
-      <span style="color:var(--steel); font-weight:400; font-size:12px;">(count is minimized first; plants without a threshold are never counted)</span>
+    <div class="section-label" style="margin-top:20px;">Key metrics</div>
+    <div class="opt-metrics">
+      <div class="om-card"><div class="om-label">Current Portfolio VC</div><div class="om-value">${m.before!==null?'\u20B9'+m.before.toFixed(4):'\u2014'}<small>/unit</small></div></div>
+      <div class="om-card"><div class="om-label">Optimized Portfolio VC</div><div class="om-value">${m.after!==null?'\u20B9'+m.after.toFixed(4):'\u2014'}<small>/unit</small></div></div>
+      <div class="om-card"><div class="om-label">VC Improvement</div><div class="om-value" style="color:${improved?'var(--green)':(worsened?'var(--rust)':'var(--steel)')}">${improved?'\u2212':(worsened?'+':'\u2248')}${improvedBy.toFixed(4)}<small>/unit</small></div></div>
+      <div class="om-card"><div class="om-label">Plants at Target</div><div class="om-value">${m.metAfter}<small>/${m.total}</small></div></div>
+      <div class="om-card"><div class="om-label">Whole Rakes Reallocated</div><div class="om-value">${fmtRakes(m.rakesMoved)}<small>rakes</small></div></div>
     </div>
-    <div style="margin-top:8px; font-size:12px; color:var(--steel); display:flex; gap:14px;">
+
+    <div class="section-label" style="margin-top:20px;">Key changes</div>
+    <ul class="key-changes">${keyChanges.map(k=>`<li>${k}</li>`).join('')}</ul>
+
+    <div class="section-label" style="margin-top:20px;">Plant-level results</div>
+    <div style="margin-top:2px; font-size:12px; color:var(--steel); display:flex; gap:14px; flex-wrap:wrap;">
       <span><span class="badge ok">Safe</span> within threshold</span>
       <span><span class="badge bad">RSD</span> exceeds threshold</span>
       <span><span class="badge na">No Constraint</span> no threshold set</span>
     </div>
+    <div style="margin-top:10px; font-weight:600; font-size:13.5px; color:var(--navy); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <span>RSD / shutdown plants:</span>
+      <span class="badge ${shutdownsBadgeClass}">${result.total_shutdowns} of ${thresholdCount}</span>
+      <span style="color:var(--steel); font-weight:400; font-size:12px;">(count is minimized first; plants without a threshold are never counted)</span>
+    </div>
+    <div class="plant-results">${plantResultRows}</div>
 
-    <div class="section-label" style="margin-top:18px;">Plant-wise VC (before / after diversion)</div>
+    <div class="section-label" style="margin-top:20px;">Detailed allocation</div>
     <div class="tbl-wrap">
       <table class="src">
         <thead><tr><th>Plant</th><th>Current Rakes</th><th>Optimized Rakes</th><th>Current VC</th><th>VC After Diversion</th><th>RSD Threshold</th><th>RSD Status</th><th>Difference in VC</th></tr></thead>
