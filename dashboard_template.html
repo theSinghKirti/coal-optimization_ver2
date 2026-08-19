@@ -296,24 +296,33 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 
 /* ===== Optimization workflow strip ===== */
 .flow{
-  display:flex;align-items:stretch;justify-content:center;flex-wrap:nowrap;gap:10px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);
+  gap:10px;align-items:stretch;
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px;
 }
 .flow-node{
-  flex:1 1 0;min-width:0;
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  background:#F4F6F8;border:1px solid var(--line);border-radius:20px;
-  padding:9px 13px;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap;
+  display:flex;flex-direction:column;gap:6px;min-width:0;
+  background:#F4F6F8;border:1px solid var(--line);border-radius:12px;
+  padding:11px 13px;
   transition:border-color .12s ease, background-color .12s ease, box-shadow .12s ease;
 }
-.flow-node b{
-  font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;color:var(--gold-deep);
-  letter-spacing:.06em;flex-shrink:0;
+.flow-node .fhead{display:flex;align-items:center;gap:8px;min-width:0;}
+.flow-node .fnum{
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;
+  color:var(--gold-deep);background:var(--gold-soft);
+  width:18px;height:18px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;
 }
-.flow-node span{overflow:hidden;text-overflow:ellipsis;}
+.flow-node .ftitle{font-size:12.5px;font-weight:700;color:var(--navy);line-height:1.3;min-width:0;overflow-wrap:anywhere;}
+.flow-node .fcheck{margin-left:auto;font-size:11px;font-weight:700;color:var(--green);flex-shrink:0;}
+.flow-node .fdesc{font-size:11px;font-weight:400;color:var(--steel);line-height:1.45;overflow-wrap:anywhere;}
 .flow-node:hover{border-color:var(--gold);background:#FBF7EC;box-shadow:var(--shadow-sm);}
-.flow-arrow{color:var(--steel-soft);font-size:13px;font-weight:700;flex-shrink:0;align-self:center;}
+.flow-node.is-done{background:#F8FAFB;border-color:#DCE3E9;}
+.flow-node.is-done .fdesc{color:#5F6B76;}
+.flow-node.is-active{border-color:var(--gold);background:#FBF7EC;box-shadow:var(--shadow-sm);}
+.flow-node.is-active .fnum{background:var(--gold);color:#fff;}
+.flow-arrow{color:var(--steel-soft);font-size:14px;font-weight:700;align-self:center;line-height:1;}
 
 /* ===== VC comparison chart (plant panel) ===== */
 .vc-compare{
@@ -584,9 +593,8 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 
 /* Tablet / below 1024: workflow wraps in a clean 3+2 grid, tabs scroll, charts compact */
 @media (max-width:1024px){
-  .flow{flex-wrap:wrap;padding:14px 16px;}
-  .flow-node{flex:1 1 29%;white-space:normal;text-align:center;justify-content:center;padding:9px 10px;}
-  .flow-node span{overflow:visible;text-overflow:clip;}
+  .flow{grid-template-columns:repeat(6,minmax(0,1fr));padding:14px 16px;}
+  .flow-node{grid-column:span 2;}
   .flow-arrow{display:none;}
   .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:14px;}
   .tab{min-width:164px;flex:0 0 auto;}
@@ -603,9 +611,8 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .topbar-controls{width:100%;justify-content:flex-start;}
 }
 
-/* Mobile large / below 768: workflow 2-per-row stair */
+/* Mobile large / below 768: denser cards, workflow stays in the 3+2 grid */
 @media (max-width:768px){
-  .flow-node{flex:1 1 44%;}
   .kpi-icon{width:30px;height:30px;}
   .panel-actions{width:100%;justify-content:flex-start;}
   .panel-head{gap:14px;}
@@ -659,8 +666,9 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 
   footer .cols{grid-template-columns:1fr;gap:20px;}
 
-  .flow{padding:10px 12px;gap:8px;}
-  .flow-node{padding:7px 10px;font-size:10.5px;flex-basis:44%;}
+  .flow{grid-template-columns:1fr;gap:2px;padding:10px 12px;}
+  .flow-node{grid-column:auto;padding:10px 13px;}
+  .flow-arrow{display:block;justify-self:center;transform:rotate(90deg);font-size:12px;padding:1px 0;}
   .vcb{grid-template-columns:1fr;gap:6px;}
   .vcb-val{text-align:left;}
   .sd-row{grid-template-columns:1fr;gap:8px;}
@@ -670,12 +678,11 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
   .tab .tab-caret{display:none;}
 }
 
-/* Small phones / below 480: KPI 1-up, single-column workflow */
+/* Small phones / below 480: KPI 1-up */
 @media (max-width:480px){
   .kpi-strip{grid-template-columns:1fr;}
   .tab{min-width:150px;}
   table.src{min-width:600px;}
-  .flow-node{flex-basis:100%;}
   .opt-metrics{grid-template-columns:1fr;}
   .pr-row{flex-direction:column;gap:6px;align-items:flex-start;}
 }
@@ -718,15 +725,49 @@ code.f{background:#E9EDF0;padding:1px 5px;border-radius:4px;font-family:'IBM Ple
 </div>
 
 <div class="flow" role="presentation">
-  <div class="flow-node"><b>1 &middot; Coal Sources</b><span>GCV / rate / freight / SCC / APC</span></div>
+  <div class="flow-node is-done">
+    <div class="fhead">
+      <span class="fnum" aria-hidden="true">1</span>
+      <span class="ftitle">Coal Sources</span>
+      <span class="fcheck" aria-hidden="true">&#10003;</span>
+    </div>
+    <div class="fdesc">GCV, rate, freight, SCC &amp; APC</div>
+  </div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>2 &middot; Rakes</b><span>whole-number availability per plant</span></div>
+  <div class="flow-node is-done">
+    <div class="fhead">
+      <span class="fnum" aria-hidden="true">2</span>
+      <span class="ftitle">Rakes</span>
+      <span class="fcheck" aria-hidden="true">&#10003;</span>
+    </div>
+    <div class="fdesc">Whole-number availability per plant</div>
+  </div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>3 &middot; Plant Allocation</b><span>min/max share caps per source</span></div>
+  <div class="flow-node is-done">
+    <div class="fhead">
+      <span class="fnum" aria-hidden="true">3</span>
+      <span class="ftitle">Plant Allocation</span>
+      <span class="fcheck" aria-hidden="true">&#10003;</span>
+    </div>
+    <div class="fdesc">Min/max share limits for each source</div>
+  </div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>4 &middot; RSD / VC Optimization</b><span>OR-Tools targets &amp;&nbsp;conservation</span></div>
+  <div class="flow-node is-done">
+    <div class="fhead">
+      <span class="fnum" aria-hidden="true">4</span>
+      <span class="ftitle">RSD / VC Optimization</span>
+      <span class="fcheck" aria-hidden="true">&#10003;</span>
+    </div>
+    <div class="fdesc">OR-Tools targets &amp; conservation rules</div>
+  </div>
   <span class="flow-arrow" aria-hidden="true">&#8594;</span>
-  <div class="flow-node"><b>5 &middot; Final Allocation</b><span>whole rakes &middot; target check</span></div>
+  <div class="flow-node is-active">
+    <div class="fhead">
+      <span class="fnum" aria-hidden="true">5</span>
+      <span class="ftitle">Final Allocation</span>
+    </div>
+    <div class="fdesc">Whole-rake result &amp; target validation</div>
+  </div>
 </div>
 
 <!-- FEATURE 3: Portfolio Rake Distribution. Populated ONLY from a
